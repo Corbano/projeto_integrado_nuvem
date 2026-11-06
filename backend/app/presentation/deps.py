@@ -3,6 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.application.services.auth_service import AuthService
+from app.application.services.user_service import UserService
 from app.domain.errors import AuthenticationError, PermissionDeniedError
 from app.domain.roles import Role
 from app.domain.user import User
@@ -33,6 +34,13 @@ def get_auth_service(
     codec: JwtCodec = Depends(get_codec),
 ) -> AuthService:
     return AuthService(users, hasher, codec)
+
+
+def get_user_service(
+    users: SqlUserRepository = Depends(get_user_repository),
+    hasher: BcryptHasher = Depends(get_hasher),
+) -> UserService:
+    return UserService(users, hasher)
 
 
 def get_current_user(

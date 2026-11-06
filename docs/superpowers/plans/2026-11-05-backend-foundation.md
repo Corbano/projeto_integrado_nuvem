@@ -2078,10 +2078,12 @@ from app.domain.roles import Role
 from app.domain.user import User
 from app.presentation.deps import get_user_service, require_roles
 
+require_admin = require_roles(Role.ADMIN)
+
 router = APIRouter(
     prefix="/users",
     tags=["users"],
-    dependencies=[Depends(require_roles(Role.ADMIN))],
+    dependencies=[Depends(require_admin)],
 )
 
 
@@ -2115,11 +2117,18 @@ def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
-    actor: User = Depends(require_roles(Role.ADMIN)),
+    actor: User = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ):
     service.delete(user_id, actor_id=actor.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+```
+
+- [ ] **Step 5b: Em `backend/pyproject.toml`, permitir `Query` como default (ruff B008)**
+
+Em `[tool.ruff.lint.flake8-bugbear]`, deixar:
+```toml
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.security.HTTPBearer"]
 ```
 
 - [ ] **Step 6: Em `backend/app/main.py`, registrar o router**

@@ -10,4 +10,4 @@ target-version = "py311"
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = ["fastapi.Depends", "fastapi.security.HTTPBearer"]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.security.HTTPBearer"]
