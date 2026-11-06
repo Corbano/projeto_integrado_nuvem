@@ -1,6 +1,5 @@
 from app.domain.roles import Role
 from app.infrastructure.db.models.customer import CustomerModel
-from app.infrastructure.repositories.customer_repository import SqlCustomerRepository
 from app.infrastructure.repositories.user_repository import SqlUserRepository
 
 URL = "/api/v1/customers"
@@ -178,10 +177,17 @@ def test_document_can_be_reused_after_delete(client, auth_header):
     assert create(client, header).status_code == 201
 
 
-def test_delete_blocked_when_customer_has_vehicles(client, auth_header, monkeypatch):
-    monkeypatch.setattr(SqlCustomerRepository, "has_vehicles", lambda self, customer_id: True)
+def test_delete_blocked_when_customer_has_vehicles(client, auth_header):
     header = auth_header()
     created = create(client, header).json()
+    vehicle = client.post(
+        "/api/v1/vehicles",
+        json={
+            "customer_id": created["id"], "plate": "ABC1234", "brand": "Fiat",
+            "model": "Uno", "year": 2015, "fuel": "flex", "color": "Prata",
+        },
+        headers=header,
+    ).json()
 
     response = client.delete(f"{URL}/{created['id']}", headers=header)
 
@@ -190,6 +196,9 @@ def test_delete_blocked_when_customer_has_vehicles(client, auth_header, monkeypa
     assert error["code"] == "business_rule_violation"
     assert error["message"] == "Cliente possui veículos cadastrados"
     assert client.get(f"{URL}/{created['id']}", headers=header).status_code == 200
+
+    assert client.delete(f"/api/v1/vehicles/{vehicle['id']}", headers=header).status_code == 204
+    assert client.delete(f"{URL}/{created['id']}", headers=header).status_code == 204
 
 
 def test_list_pagination_and_search(client, auth_header):

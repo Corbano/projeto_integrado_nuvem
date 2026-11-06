@@ -2,10 +2,17 @@ from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.application.dtos.common import Page
 from app.application.dtos.customer import CustomerCreate, CustomerOut, CustomerUpdate
+from app.application.dtos.vehicle import VehicleOut
 from app.application.services.customer_service import CustomerService
+from app.application.services.vehicle_service import VehicleService
 from app.domain.roles import Role
 from app.domain.user import User
-from app.presentation.deps import get_current_user, get_customer_service, require_roles
+from app.presentation.deps import (
+    get_current_user,
+    get_customer_service,
+    get_vehicle_service,
+    require_roles,
+)
 
 require_writer = require_roles(Role.ADMIN, Role.RECEPTION)
 
@@ -39,6 +46,16 @@ def create_customer(
 @router.get("/{customer_id}", response_model=CustomerOut)
 def get_customer(customer_id: int, service: CustomerService = Depends(get_customer_service)):
     return service.get(customer_id)
+
+
+@router.get("/{customer_id}/vehicles", response_model=Page[VehicleOut])
+def list_customer_vehicles(
+    customer_id: int,
+    page: int = Query(1, ge=1, le=1_000_000),
+    size: int = Query(20, ge=1, le=100),
+    service: VehicleService = Depends(get_vehicle_service),
+):
+    return service.list_by_customer(customer_id, page=page, size=size)
 
 
 @router.patch("/{customer_id}", response_model=CustomerOut)
