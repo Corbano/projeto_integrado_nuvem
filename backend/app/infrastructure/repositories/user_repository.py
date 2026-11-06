@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import Select, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.domain.errors import NotFoundError
+from app.domain.errors import ConflictError, NotFoundError
 from app.domain.roles import Role
 from app.domain.user import User
 from app.infrastructure.db.models.user import UserModel
@@ -27,6 +28,13 @@ class SqlUserRepository:
     @staticmethod
     def _alive() -> Select[tuple[UserModel]]:
         return select(UserModel).where(UserModel.deleted_at.is_(None))
+
+    def _commit(self) -> None:
+        try:
+            self._db.commit()
+        except IntegrityError:
+            self._db.rollback()
+            raise ConflictError("E-mail já cadastrado") from None
 
     def _get_alive_model(self, user_id: int) -> UserModel:
         model = self._db.scalar(self._alive().where(UserModel.id == user_id))
@@ -57,7 +65,7 @@ class SqlUserRepository:
             active=user.active,
         )
         self._db.add(model)
-        self._db.commit()
+        self._commit()
         self._db.refresh(model)
         return self._to_entity(model)
 
@@ -67,7 +75,7 @@ class SqlUserRepository:
         model.password_hash = user.password_hash
         model.role = user.role.value
         model.active = user.active
-        self._db.commit()
+        self._commit()
         self._db.refresh(model)
         return self._to_entity(model)
 
@@ -81,8 +89,14 @@ class SqlUserRepository:
     ) -> tuple[list[User], int]:
         stmt = self._alive()
         if search and search.strip():
-            like = f"%{search.strip()}%"
-            stmt = stmt.where(or_(UserModel.name.ilike(like), UserModel.email.ilike(like)))
+            esc = search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            like = f"%{esc}%"
+            stmt = stmt.where(
+                or_(
+                    UserModel.name.ilike(like, escape="\\"),
+                    UserModel.email.ilike(like, escape="\\"),
+                )
+            )
         total = self._db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
         rows = self._db.scalars(stmt.order_by(UserModel.id).offset(offset).limit(limit)).all()
         return [self._to_entity(r) for r in rows], total

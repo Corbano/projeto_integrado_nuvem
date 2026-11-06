@@ -1,6 +1,6 @@
 import pytest
 
-from app.domain.errors import NotFoundError
+from app.domain.errors import ConflictError, NotFoundError
 from app.domain.roles import Role
 from app.domain.user import User
 from app.infrastructure.repositories.user_repository import SqlUserRepository
@@ -75,6 +75,37 @@ def test_list_page_search_matches_name_or_email(repo):
 
     assert total_name == 1 and by_name[0].name == "João"
     assert total_email == 1 and by_email[0].name == "Maria"
+
+
+def test_add_duplicate_email_raises_conflict(repo):
+    repo.add(new_user())
+
+    with pytest.raises(ConflictError):
+        repo.add(new_user(name="Outra Ana"))
+
+
+def test_session_usable_after_duplicate_email(repo):
+    first = repo.add(new_user())
+
+    with pytest.raises(ConflictError):
+        repo.add(new_user(name="Outra Ana"))
+
+    assert repo.get_by_email("ana@example.com") == first
+    other = repo.add(new_user(email="outra@example.com", name="Outra"))
+    assert other.id is not None
+
+
+def test_list_page_search_escapes_like_wildcards(repo):
+    repo.add(new_user(email="a@example.com", name="Ana"))
+    repo.add(new_user(email="b@example.com", name="Bia"))
+
+    _, total_percent = repo.list_page(offset=0, limit=10, search="%")
+    _, total_underscore = repo.list_page(offset=0, limit=10, search="_")
+    found, total_a = repo.list_page(offset=0, limit=10, search="a@")
+
+    assert total_percent == 0
+    assert total_underscore == 0
+    assert total_a == 1 and found[0].email == "a@example.com"
 
 
 def test_list_page_excludes_deleted(repo):

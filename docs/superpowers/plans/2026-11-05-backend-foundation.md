@@ -1027,7 +1027,7 @@ git commit -m "feat: handlers globais de excecao com envelope de erro padronizad
 ```python
 import pytest
 
-from app.domain.errors import NotFoundError
+from app.domain.errors import ConflictError, NotFoundError
 from app.domain.roles import Role
 from app.domain.user import User
 from app.infrastructure.repositories.user_repository import SqlUserRepository
@@ -1104,6 +1104,37 @@ def test_list_page_search_matches_name_or_email(repo):
     assert total_email == 1 and by_email[0].name == "Maria"
 
 
+def test_add_duplicate_email_raises_conflict(repo):
+    repo.add(new_user())
+
+    with pytest.raises(ConflictError):
+        repo.add(new_user(name="Outra Ana"))
+
+
+def test_session_usable_after_duplicate_email(repo):
+    first = repo.add(new_user())
+
+    with pytest.raises(ConflictError):
+        repo.add(new_user(name="Outra Ana"))
+
+    assert repo.get_by_email("ana@example.com") == first
+    other = repo.add(new_user(email="outra@example.com", name="Outra"))
+    assert other.id is not None
+
+
+def test_list_page_search_escapes_like_wildcards(repo):
+    repo.add(new_user(email="a@example.com", name="Ana"))
+    repo.add(new_user(email="b@example.com", name="Bia"))
+
+    _, total_percent = repo.list_page(offset=0, limit=10, search="%")
+    _, total_underscore = repo.list_page(offset=0, limit=10, search="_")
+    found, total_a = repo.list_page(offset=0, limit=10, search="a@")
+
+    assert total_percent == 0
+    assert total_underscore == 0
+    assert total_a == 1 and found[0].email == "a@example.com"
+
+
 def test_list_page_excludes_deleted(repo):
     keep = repo.add(new_user(email="a@example.com"))
     gone = repo.add(new_user(email="b@example.com"))
@@ -1125,9 +1156,10 @@ Expected: FAIL com `ModuleNotFoundError: app.infrastructure.repositories`.
 from datetime import UTC, datetime
 
 from sqlalchemy import Select, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.domain.errors import NotFoundError
+from app.domain.errors import ConflictError, NotFoundError
 from app.domain.roles import Role
 from app.domain.user import User
 from app.infrastructure.db.models.user import UserModel
@@ -1151,6 +1183,13 @@ class SqlUserRepository:
     @staticmethod
     def _alive() -> Select[tuple[UserModel]]:
         return select(UserModel).where(UserModel.deleted_at.is_(None))
+
+    def _commit(self) -> None:
+        try:
+            self._db.commit()
+        except IntegrityError:
+            self._db.rollback()
+            raise ConflictError("E-mail já cadastrado") from None
 
     def _get_alive_model(self, user_id: int) -> UserModel:
         model = self._db.scalar(self._alive().where(UserModel.id == user_id))
@@ -1181,7 +1220,7 @@ class SqlUserRepository:
             active=user.active,
         )
         self._db.add(model)
-        self._db.commit()
+        self._commit()
         self._db.refresh(model)
         return self._to_entity(model)
 
@@ -1191,7 +1230,7 @@ class SqlUserRepository:
         model.password_hash = user.password_hash
         model.role = user.role.value
         model.active = user.active
-        self._db.commit()
+        self._commit()
         self._db.refresh(model)
         return self._to_entity(model)
 
@@ -1205,8 +1244,14 @@ class SqlUserRepository:
     ) -> tuple[list[User], int]:
         stmt = self._alive()
         if search and search.strip():
-            like = f"%{search.strip()}%"
-            stmt = stmt.where(or_(UserModel.name.ilike(like), UserModel.email.ilike(like)))
+            esc = search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            like = f"%{esc}%"
+            stmt = stmt.where(
+                or_(
+                    UserModel.name.ilike(like, escape="\\"),
+                    UserModel.email.ilike(like, escape="\\"),
+                )
+            )
         total = self._db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
         rows = self._db.scalars(stmt.order_by(UserModel.id).offset(offset).limit(limit)).all()
         return [self._to_entity(r) for r in rows], total
@@ -1215,7 +1260,7 @@ class SqlUserRepository:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `python -m pytest tests/test_user_repository.py -v`
-Expected: PASS (8 passed).
+Expected: PASS (11 passed).
 
 - [ ] **Step 5: Commit**
 
