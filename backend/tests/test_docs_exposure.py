@@ -11,6 +11,8 @@ def settings_env(monkeypatch):
         monkeypatch.setenv("ENVIRONMENT", environment)
         monkeypatch.setenv("JWT_SECRET", "s" * 40)
         monkeypatch.setenv("DATABASE_URL", "mysql+pymysql://u:p@localhost/db")
+        monkeypatch.setenv("STORAGE_BACKEND", "s3")
+        monkeypatch.setenv("S3_BUCKET", "bucket-ficticio")
         get_settings.cache_clear()
 
     yield apply
