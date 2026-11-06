@@ -5,10 +5,10 @@ import type { JobItem, JobStatus } from './types'
 
 /** Cor do ponto, do rótulo e da barra em cada estado (rótulos claros sobre o cartão escuro). */
 const look: Record<JobStatus, { dot: string; text: string; bar: ProgressTone }> = {
-  'Em andamento': { dot: 'bg-[#6f9bff]', text: 'text-[#9db9ff]', bar: 'azul' },
-  'Aguardando peça': { dot: 'bg-[#ffc24d]', text: 'text-[#ffd27a]', bar: 'atencao' },
-  'Em revisão': { dot: 'bg-[#b496ff]', text: 'text-[#cdbbff]', bar: 'violeta' },
-  'Pronto para entrega': { dot: 'bg-[#4fe3c1]', text: 'text-[#86efd6]', bar: 'menta' },
+  'Em andamento': { dot: 'bg-job-azul', text: 'text-job-azul-texto', bar: 'azul' },
+  'Aguardando peça': { dot: 'bg-job-ambar', text: 'text-job-ambar-texto', bar: 'atencao' },
+  'Em revisão': { dot: 'bg-job-violeta', text: 'text-job-violeta-texto', bar: 'violeta' },
+  'Pronto para entrega': { dot: 'bg-job-menta', text: 'text-job-menta-texto', bar: 'menta' },
 }
 
 const order: JobStatus[] = ['Em andamento', 'Aguardando peça', 'Em revisão', 'Pronto para entrega']

@@ -32,7 +32,7 @@ export function Logo({ className, tone = 'onLight', size = 'md', markOnly = fals
       >
         <svg viewBox="0 0 24 24" className={s.glyph}>
           <path d={GEAR_PATH} fill="var(--color-azul)" />
-          <circle cx="12" cy="12" r="4.1" fill={tone === 'onLight' ? 'var(--color-navy)' : '#1a2356'} />
+          <circle cx="12" cy="12" r="4.1" fill={tone === 'onLight' ? 'var(--color-navy)' : 'var(--color-navy-2)'} />
           <circle cx="12" cy="12" r="1.9" fill="var(--color-menta)" />
         </svg>
       </span>

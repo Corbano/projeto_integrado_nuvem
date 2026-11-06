@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
@@ -29,6 +31,16 @@ function luminance(h: string): number {
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
   })
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+const tokensCss = readFileSync(resolve(__dirname, '../../styles/tokens.css'), 'utf-8')
+
+/** Resolve 'var(--color-x)' para o hex definido em tokens.css. */
+function tokenHex(value: string): string {
+  const name = value.match(/^var\((--[\w-]+)\)$/)?.[1]
+  const hex = name && tokensCss.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6});`))?.[1]
+  if (!hex) throw new Error(`token não resolvido: ${value}`)
+  return hex
 }
 
 function ratio(a: string, b: string): number {
@@ -91,7 +103,7 @@ describe('Avatar', () => {
   })
 
   it.each(AVATAR_TONES.map((t) => [t.fg, t.bg]))('texto %s sobre %s >= 4.5', (fg, bg) => {
-    expect(ratio(fg, bg)).toBeGreaterThanOrEqual(4.5)
+    expect(ratio(tokenHex(fg), tokenHex(bg))).toBeGreaterThanOrEqual(4.5)
   })
 })
 
@@ -217,7 +229,7 @@ describe('ProgressBar e DonutProgress', () => {
   })
 
   it('DonutProgress é uma imagem com rótulo e percentual', () => {
-    render(<DonutProgress label="Peças" value={37} tone="laranja" />)
+    render(<DonutProgress label="Peças" value={37} tone="menta" />)
     expect(screen.getByRole('img', { name: 'Peças: 37%' })).toBeInTheDocument()
     expect(screen.getByText('37%')).toHaveAttribute('aria-hidden', 'true')
   })

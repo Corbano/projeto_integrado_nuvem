@@ -3,7 +3,7 @@ import type { ProgressTone } from '../../shared/ui'
 import { formatBrl } from './format'
 import type { BudgetItem } from './types'
 
-const tones: ProgressTone[] = ['laranja', 'azul', 'violeta']
+const tones: ProgressTone[] = ['menta', 'azul', 'violeta']
 
 export interface BudgetDonutsProps {
   items: BudgetItem[]

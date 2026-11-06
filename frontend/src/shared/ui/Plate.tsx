@@ -47,7 +47,7 @@ export function Plate({ value, size = 'md', className }: PlateProps) {
       aria-label={`Placa ${text}`}
       data-valid="true"
       className={cn(
-        'inline-flex flex-col overflow-hidden rounded-placa border-[1.5px] border-tinta bg-white text-tinta shadow-[0_1px_2px_rgba(16,25,74,0.08)]',
+        'inline-flex flex-col overflow-hidden rounded-placa border-[1.5px] border-tinta bg-white text-tinta shadow-controle',
         className,
       )}
     >

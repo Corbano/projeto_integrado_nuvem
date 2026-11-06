@@ -27,6 +27,8 @@
   /* Marca e estrutura */
   --color-navy: #10194a;
   --color-navy-2: #1b2766;
+  /* hover do CTA menta */
+  --color-menta-escuro: #10b592;
   --color-azul: #2457e6;
   /* hover/pressionado do azul */
   --color-azul-escuro: #1b45bd;
@@ -49,6 +51,8 @@
   --color-critico: #e5484d;
   --color-critico-texto: #b3262b;
   --color-critico-fundo: #fde8e9;
+  /* hover do botao de perigo */
+  --color-critico-escuro: #962024;
   --color-info-fundo: #e8eeff;
 
   /* Acentos por funcionalidade (barra no topo do card) */
@@ -56,8 +60,24 @@
   --color-acento-menta: #14c9a4;
   --color-acento-violeta: #6b3fe0;
   --color-acento-ciano: #0e8fb0;
-  --color-acento-laranja: #f2711c;
-  --color-acento-rosa: #d9468f;
+
+  /* Variantes de texto dos acentos (>= 4,5:1 sobre o fundo suave do acento) e fundos suaves */
+  --color-menta-texto: #0a7a64;
+  --color-menta-fundo: #e3f8f4;
+  --color-violeta-texto: #5530bd;
+  --color-violeta-fundo: #efe9fd;
+  --color-ciano-texto: #0a6580;
+  --color-ciano-fundo: #e1f3f8;
+
+  /* Cartoes de servico (claros sobre navy-2): ponto e rotulo de cada situacao */
+  --color-job-azul: #6f9bff;
+  --color-job-azul-texto: #9db9ff;
+  --color-job-ambar: #ffc24d;
+  --color-job-ambar-texto: #ffd27a;
+  --color-job-violeta: #b496ff;
+  --color-job-violeta-texto: #cdbbff;
+  --color-job-menta: #4fe3c1;
+  --color-job-menta-texto: #86efd6;
 
   /* Colunas do kanban (fundo suave) */
   --color-coluna-azul: #eaf0ff;
@@ -74,10 +94,21 @@
   --radius-dialogo: 20px;
   --radius-pilula: 9999px;
 
-  --shadow-card: 0 1px 2px rgba(16, 25, 74, 0.06), 0 8px 24px rgba(16, 25, 74, 0.06);
-  --shadow-card-hover: 0 2px 4px rgba(16, 25, 74, 0.08), 0 14px 32px rgba(16, 25, 74, 0.1);
-  --shadow-menu: 0 4px 12px rgba(16, 25, 74, 0.1), 0 1px 3px rgba(16, 25, 74, 0.08);
-  --shadow-dialogo: 0 24px 64px rgba(16, 25, 74, 0.22), 0 2px 8px rgba(16, 25, 74, 0.08);
+  /* Sombras derivadas do navy */
+  --shadow-controle: 0 1px 2px color-mix(in srgb, var(--color-navy) 6%, transparent);
+  --shadow-card: 0 1px 2px color-mix(in srgb, var(--color-navy) 6%, transparent),
+    0 8px 24px color-mix(in srgb, var(--color-navy) 6%, transparent);
+  --shadow-card-hover: 0 2px 4px color-mix(in srgb, var(--color-navy) 8%, transparent),
+    0 14px 32px color-mix(in srgb, var(--color-navy) 10%, transparent);
+  --shadow-menu: 0 4px 12px color-mix(in srgb, var(--color-navy) 10%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-navy) 8%, transparent);
+  --shadow-dialogo: 0 24px 64px color-mix(in srgb, var(--color-navy) 22%, transparent),
+    0 2px 8px color-mix(in srgb, var(--color-navy) 8%, transparent);
+  --shadow-login: 0 24px 48px color-mix(in srgb, var(--color-navy) 40%, transparent);
+  --shadow-ativo: 0 4px 12px color-mix(in srgb, var(--color-azul) 35%, transparent);
+  --shadow-foco: 0 0 0 1px var(--color-azul), 0 0 0 4px color-mix(in srgb, var(--color-azul) 16%, transparent);
+  --shadow-foco-erro: 0 0 0 1px var(--color-critico-texto),
+    0 0 0 4px color-mix(in srgb, var(--color-critico-texto) 14%, transparent);
 
   /* Escala tipografica nomeada (nao sobrescreve text-sm/base/lg do Tailwind) */
   --text-legenda: 12px;

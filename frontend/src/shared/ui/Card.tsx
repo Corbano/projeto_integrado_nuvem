@@ -1,15 +1,13 @@
 import type { ElementType, HTMLAttributes, ReactNode } from 'react'
 import { cn } from './cn'
 
-export type AccentColor = 'azul' | 'menta' | 'violeta' | 'ciano' | 'laranja' | 'rosa'
+export type AccentColor = 'azul' | 'menta' | 'violeta' | 'ciano'
 
 const accentBar: Record<AccentColor, string> = {
   azul: 'bg-acento-azul',
   menta: 'bg-acento-menta',
   violeta: 'bg-acento-violeta',
   ciano: 'bg-acento-ciano',
-  laranja: 'bg-acento-laranja',
-  rosa: 'bg-acento-rosa',
 }
 
 export interface CardProps extends HTMLAttributes<HTMLElement> {

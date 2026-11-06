@@ -5,9 +5,9 @@ import { cn } from './cn'
 export const controlClasses =
   'min-h-11 w-full rounded-controle border border-borda-campo bg-superficie px-3 font-sans text-corpo text-tinta ' +
   'placeholder:text-tinta-suave transition-[border-color,box-shadow] duration-150 hover:border-tinta-suave ' +
-  'focus:outline-none focus-visible:outline-none focus:border-azul focus:shadow-[0_0_0_1px_var(--color-azul),0_0_0_4px_rgba(36,87,230,0.16)] ' +
+  'focus:outline-none focus-visible:outline-none focus:border-azul focus:shadow-foco ' +
   'aria-[invalid=true]:border-critico-texto aria-[invalid=true]:shadow-[0_0_0_1px_var(--color-critico-texto)] ' +
-  'aria-[invalid=true]:focus:shadow-[0_0_0_1px_var(--color-critico-texto),0_0_0_4px_rgba(179,38,43,0.14)] ' +
+  'aria-[invalid=true]:focus:shadow-foco-erro ' +
   'disabled:cursor-not-allowed disabled:bg-fundo disabled:opacity-70'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {

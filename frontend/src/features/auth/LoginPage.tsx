@@ -42,7 +42,7 @@ function ServicePreview() {
   return (
     <div
       aria-hidden="true"
-      className="w-full max-w-[360px] rounded-card bg-superficie p-4 text-tinta shadow-[0_24px_48px_rgba(4,8,30,0.35)]"
+      className="w-full max-w-[360px] rounded-card bg-superficie p-4 text-tinta shadow-login"
     >
       <div className="flex items-center justify-between gap-3">
         <div>

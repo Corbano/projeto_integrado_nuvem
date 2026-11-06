@@ -8,12 +8,10 @@ import type { AppModule } from './modules'
 
 /** Tom escuro do acento (>= 4,5:1 sobre o fundo suave) para ícones e checks; a barra usa a cor pura. */
 const INK: Record<AccentColor, string> = {
-  azul: '#2457e6',
-  menta: '#0b7f68',
-  violeta: '#5530bd',
-  ciano: '#0a6580',
-  laranja: '#b4500c',
-  rosa: '#a92e6d',
+  azul: 'var(--color-azul)',
+  menta: 'var(--color-menta-texto)',
+  violeta: 'var(--color-violeta-texto)',
+  ciano: 'var(--color-ciano-texto)',
 }
 
 const PURE: Record<AccentColor, string> = {
@@ -21,8 +19,6 @@ const PURE: Record<AccentColor, string> = {
   menta: 'var(--color-acento-menta)',
   violeta: 'var(--color-acento-violeta)',
   ciano: 'var(--color-acento-ciano)',
-  laranja: 'var(--color-acento-laranja)',
-  rosa: 'var(--color-acento-rosa)',
 }
 
 const buttonBase =

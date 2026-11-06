@@ -10,7 +10,7 @@ const PAD = { left: 58, right: 14, top: 14, bottom: 30 }
 
 const stroke: Record<RevenueSeries['id'], string> = {
   receita: 'var(--color-azul)',
-  despesas: 'var(--color-acento-laranja)',
+  despesas: 'var(--color-acento-violeta)',
   lucro: 'var(--color-ok)',
 }
 
@@ -204,7 +204,7 @@ function ChartBody({ series, gradientId }: { series: RevenueSeries; gradientId: 
           {active !== null && (
             <g>
               <line x1={x(active)} x2={x(active)} y1={PAD.top} y2={PAD.top + plotH} stroke={color} strokeOpacity="0.35" />
-              <circle cx={x(active)} cy={y(points[active].value)} r="5" fill="#fff" stroke={color} strokeWidth="2.5" />
+              <circle cx={x(active)} cy={y(points[active].value)} r="5" fill="var(--color-superficie)" stroke={color} strokeWidth="2.5" />
             </g>
           )}
         </svg>

@@ -55,7 +55,7 @@ function NavEntry({ entry, iconOnly, onNavigate }: { entry: NavEntryData; iconOn
           itemBase,
           justify,
           isActive
-            ? 'bg-azul text-white shadow-[0_4px_12px_rgba(36,87,230,0.35)]'
+            ? 'bg-azul text-white shadow-ativo'
             : 'text-white/80 hover:bg-white/10 hover:text-white',
         )
       }

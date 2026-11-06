@@ -1,6 +1,6 @@
 import { cn } from './cn'
 
-export type ProgressTone = 'azul' | 'menta' | 'ok' | 'atencao' | 'critico' | 'violeta' | 'laranja'
+export type ProgressTone = 'azul' | 'menta' | 'ok' | 'atencao' | 'critico' | 'violeta'
 
 const fill: Record<ProgressTone, string> = {
   azul: 'var(--color-azul)',
@@ -9,7 +9,6 @@ const fill: Record<ProgressTone, string> = {
   atencao: 'var(--color-atencao)',
   critico: 'var(--color-critico)',
   violeta: 'var(--color-acento-violeta)',
-  laranja: 'var(--color-acento-laranja)',
 }
 
 function clampPercent(value: number, max: number): number {

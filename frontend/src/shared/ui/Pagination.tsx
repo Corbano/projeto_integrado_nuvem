@@ -36,7 +36,7 @@ function PageButton({
       onClick={onClick}
       className={cn(
         'inline-flex size-9 items-center justify-center rounded-controle border border-linha bg-superficie text-tinta',
-        'shadow-[0_1px_2px_rgba(16,25,74,0.05)] transition-colors hover:border-borda-campo hover:bg-fundo',
+        'shadow-controle transition-colors hover:border-borda-campo hover:bg-fundo',
         'disabled:cursor-not-allowed disabled:text-borda-campo disabled:shadow-none disabled:hover:border-linha disabled:hover:bg-superficie',
       )}
     >

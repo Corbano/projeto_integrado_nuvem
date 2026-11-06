@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const css = readFileSync(resolve(__dirname, 'tokens.css'), 'utf-8')
@@ -30,8 +30,22 @@ const colors: Record<string, string> = {
   'acento-menta': '#14C9A4',
   'acento-violeta': '#6B3FE0',
   'acento-ciano': '#0E8FB0',
-  'acento-laranja': '#F2711C',
-  'acento-rosa': '#D9468F',
+  'menta-escuro': '#10B592',
+  'critico-escuro': '#962024',
+  'menta-texto': '#0A7A64',
+  'menta-fundo': '#E3F8F4',
+  'violeta-texto': '#5530BD',
+  'violeta-fundo': '#EFE9FD',
+  'ciano-texto': '#0A6580',
+  'ciano-fundo': '#E1F3F8',
+  'job-azul': '#6F9BFF',
+  'job-azul-texto': '#9DB9FF',
+  'job-ambar': '#FFC24D',
+  'job-ambar-texto': '#FFD27A',
+  'job-violeta': '#B496FF',
+  'job-violeta-texto': '#CDBBFF',
+  'job-menta': '#4FE3C1',
+  'job-menta-texto': '#86EFD6',
   'coluna-azul': '#EAF0FF',
   'coluna-verde': '#E5F6EE',
   'coluna-laranja': '#FFF0E1',
@@ -110,8 +124,27 @@ describe('tokens.css', () => {
   })
 
   it('define as sombras de card e diálogo', () => {
-    expect(token('shadow-card')).toBe('0 1px 2px rgba(16, 25, 74, 0.06), 0 8px 24px rgba(16, 25, 74, 0.06)')
+    expect(token('shadow-card')).toContain('color-mix(in srgb, var(--color-navy) 6%, transparent)')
     expect(token('shadow-dialogo')).toBeDefined()
+  })
+
+  it('não usa laranja nem rosa como acento de card', () => {
+    expect(css).not.toMatch(/--color-acento-(laranja|rosa)/)
+  })
+
+  it('nenhum componente usa cor hex ou rgb crua (só tokens)', () => {
+    const files: string[] = []
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name)
+        if (statSync(p).isDirectory()) walk(p)
+        else if (/\.(tsx?|css)$/.test(name) && !/\.test\./.test(name) && name !== 'tokens.css') files.push(p)
+      }
+    }
+    walk(resolve(__dirname, '..'))
+    const raw = /#[0-9a-fA-F]{3,8}(?![0-9a-zA-Z])|rgba?\(/
+    const offenders = files.filter((f) => raw.test(readFileSync(f, 'utf-8').replace(/&#\d+;/g, '')))
+    expect(offenders).toEqual([])
   })
 
   it('não redefine utilitários padrão do Tailwind', () => {
@@ -140,11 +173,22 @@ describe('contraste WCAG AA', () => {
     ['critico-texto', 'critico-fundo'],
     ['critico-texto', 'superficie'],
     ['navy', 'menta'],
+    ['menta-texto', 'superficie'],
+    ['menta-texto', 'menta-fundo'],
+    ['violeta-texto', 'violeta-fundo'],
+    ['violeta-texto', 'superficie'],
+    ['ciano-texto', 'ciano-fundo'],
+    ['ciano-texto', 'superficie'],
+    ['azul', 'ciano-fundo'],
+    ['job-azul-texto', 'navy-2'],
+    ['job-ambar-texto', 'navy-2'],
+    ['job-violeta-texto', 'navy-2'],
+    ['job-menta-texto', 'navy-2'],
   ])('%s sobre %s >= 4.5', (fg, bg) => {
     expect(text(fg, bg)).toBeGreaterThanOrEqual(4.5)
   })
 
-  it.each(['azul', 'azul-escuro', 'navy', 'navy-2', 'critico-texto'])('branco sobre %s >= 4.5', (bg) => {
+  it.each(['azul', 'azul-escuro', 'navy', 'navy-2', 'critico-texto', 'critico-escuro'])('branco sobre %s >= 4.5', (bg) => {
     expect(ratio('#FFFFFF', hex(bg))).toBeGreaterThanOrEqual(4.5)
   })
 

@@ -12,16 +12,16 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const outline =
-  'bg-superficie text-tinta border border-linha shadow-[0_1px_2px_rgba(16,25,74,0.05)] hover:border-borda-campo hover:bg-fundo'
+  'bg-superficie text-tinta border border-linha shadow-controle hover:border-borda-campo hover:bg-fundo'
 
 const variants: Record<ButtonVariant, string> = {
   primary: 'bg-azul text-white border border-azul hover:bg-azul-escuro hover:border-azul-escuro',
-  accent: 'bg-menta text-navy border border-menta hover:bg-[#10B592] hover:border-[#10B592]',
+  accent: 'bg-menta text-navy border border-menta hover:bg-menta-escuro hover:border-menta-escuro',
   dark: 'bg-navy text-white border border-navy hover:bg-navy-2 hover:border-navy-2',
   outline,
   /** Alias de `outline`, mantido por compatibilidade. */
   secondary: outline,
-  danger: 'bg-critico-texto text-white border border-critico-texto hover:bg-[#962024] hover:border-[#962024]',
+  danger: 'bg-critico-texto text-white border border-critico-texto hover:bg-critico-escuro hover:border-critico-escuro',
   ghost: 'bg-transparent text-azul border border-transparent hover:bg-info-fundo',
 }
 

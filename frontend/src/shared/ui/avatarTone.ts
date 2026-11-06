@@ -1,11 +1,11 @@
-/** Pares fundo/texto suaves do Avatar, todos com texto >= 4.5:1 sobre o próprio fundo (ver ui.test). */
+/** Pares fundo/texto suaves do Avatar, todos com texto >= 4.5:1 sobre o próprio fundo (ver components.test, que resolve os tokens). */
 export const AVATAR_TONES = [
-  { bg: '#E8EEFF', fg: '#2457E6' },
-  { bg: '#E3F6EE', fg: '#13744D' },
-  { bg: '#FFF3D6', fg: '#8A5A00' },
-  { bg: '#FDE8E9', fg: '#B3262B' },
-  { bg: '#EFE9FD', fg: '#5530BD' },
-  { bg: '#E1F3F8', fg: '#0A6580' },
+  { bg: 'var(--color-info-fundo)', fg: 'var(--color-azul)' },
+  { bg: 'var(--color-ok-fundo)', fg: 'var(--color-ok-texto)' },
+  { bg: 'var(--color-atencao-fundo)', fg: 'var(--color-atencao-texto)' },
+  { bg: 'var(--color-critico-fundo)', fg: 'var(--color-critico-texto)' },
+  { bg: 'var(--color-violeta-fundo)', fg: 'var(--color-violeta-texto)' },
+  { bg: 'var(--color-ciano-fundo)', fg: 'var(--color-ciano-texto)' },
 ] as const
 
 export function initials(name: string): string {
