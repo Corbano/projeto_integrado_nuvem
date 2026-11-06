@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.infrastructure.config import get_settings
 from app.presentation.errors import register_exception_handlers
-from app.presentation.routers import auth, checkins, customers, km, users, vehicles
+from app.presentation.routers import auth, checkins, customers, km, service_orders, users, vehicles
 
 
 def create_app() -> FastAPI:
@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
     app.include_router(vehicles.router, prefix="/api/v1")
     app.include_router(km.router, prefix="/api/v1")
     app.include_router(checkins.router, prefix="/api/v1")
+    app.include_router(service_orders.router, prefix="/api/v1")
     return app
 
 

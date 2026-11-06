@@ -10,6 +10,7 @@ from app.application.services.auth_service import AuthService
 from app.application.services.checkin_service import CheckinService
 from app.application.services.customer_service import CustomerService
 from app.application.services.km_service import KmService
+from app.application.services.service_order_service import ServiceOrderService
 from app.application.services.user_service import UserService
 from app.application.services.vehicle_service import VehicleService
 from app.domain.errors import AuthenticationError, PermissionDeniedError
@@ -24,6 +25,7 @@ from app.infrastructure.repositories.checkin_repository import (
 )
 from app.infrastructure.repositories.customer_repository import SqlCustomerRepository
 from app.infrastructure.repositories.km_repository import SqlKmReadingRepository
+from app.infrastructure.repositories.service_order_repository import SqlServiceOrderRepository
 from app.infrastructure.repositories.user_repository import SqlUserRepository
 from app.infrastructure.repositories.vehicle_repository import SqlVehicleRepository
 from app.infrastructure.security import BcryptHasher, JwtCodec
@@ -95,6 +97,17 @@ def get_checkin_service(
         KmService(SqlKmReadingRepository(db), vehicles, uow),
         storage,
         uow,
+    )
+
+
+def get_service_order_service(db: Session = Depends(get_db)) -> ServiceOrderService:
+    return ServiceOrderService(
+        SqlServiceOrderRepository(db),
+        SqlVehicleRepository(db),
+        SqlCustomerRepository(db),
+        SqlCheckinRepository(db),
+        SqlUserRepository(db),
+        SqlUnitOfWork(db),
     )
 
 

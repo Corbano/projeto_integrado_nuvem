@@ -63,6 +63,7 @@ ruff check .
 | Veículos | `GET /vehicles` (`page`, `size`, `q` por placa/marca/modelo, `customer_id`), `POST /vehicles`, `GET,PATCH,DELETE /vehicles/{id}`, `GET /customers/{id}/vehicles` | leitura: qualquer perfil autenticado; escrita: admin e recepção |
 | Quilometragem | `POST /vehicles/{id}/km` (`km`, `note?`, `force?`), `GET /vehicles/{id}/km` (`page`, `size`, mais recentes primeiro) | leitura: qualquer perfil autenticado; registro: admin, recepção e mecânico (`force`: só admin) |
 | Check-in | `GET /checkins` (`page`, `size`, `vehicle_id`), `POST /checkins`, `GET /checkins/{id}` (checklist + fotos), `POST /checkins/{id}/photos/presign`, `POST /checkins/{id}/photos/{photo_id}/confirm`, `DELETE /checkins/{id}/photos/{photo_id}` | leitura: qualquer perfil autenticado; escrita (incl. fotos): admin e recepção |
+| Ordens de serviço | `GET /service-orders` (`page`, `size`, `q` por número/placa/nome do cliente, `status`, `vehicle_id`, `mechanic_id`), `POST /service-orders`, `GET,PATCH,DELETE /service-orders/{id}`, `POST /service-orders/{id}/status` (`{"to": ...}`), `POST /service-orders/{id}/items`, `PATCH,DELETE /service-orders/{id}/items/{item_id}` | autenticado; autorização por perfil/transição/atribuição (tabela abaixo) |
 
 Clientes: `document` aceita CPF ou CNPJ (com ou sem máscara, validado pelos dígitos
 verificadores) e é armazenado só com dígitos; único entre não excluídos (409). `phone`
@@ -83,6 +84,29 @@ Quilometragem: `POST /vehicles/{id}/km` grava a leitura e atualiza `vehicles.cur
 Check-in: `POST /checkins` exige os 7 itens do checklist (`pneus`, `suspensao`, `freios`, `iluminacao`, `bateria`, `ar_condicionado`, `limpadores`), cada um exatamente uma vez com `condition` `ok|atencao|critico` (faltando/repetido: 422), e `fuel_level` `vazio|quarto|meio|tres_quartos|cheio`. A quilometragem é registrada via `KmService.record` (origem `checkin`) **na mesma transação**: km menor que o atual dá 422 e nada é criado; igual é aceito sem nova leitura. Mecânico não cria check-in (403).
 
 Fotos (máx. 10 por check-in, `image/jpeg|png|webp`, até 8 MB): `presign` valida tipo/tamanho/limite (confirmadas + reservas pendentes de até 15 min) e devolve `{photo_id, upload: {url, method, fields, headers}, expires_in}`; o cliente envia o arquivo direto ao S3 e chama `confirm`, que só confirma se o objeto existe no armazenamento com tipo/tamanho válidos (senão 422; objeto fora do combinado é descartado). `GET /checkins/{id}` devolve as fotos com `download_url` assinada de 15 minutos apenas para as confirmadas. A chave do objeto é `checkins/{checkin_id}/{uuid4}.{ext}`, com a extensão vinda do tipo validado, nunca do nome do arquivo.
+
+Ordens de serviço (`/service-orders`): `POST` (admin e recepção) cria a OS em `aberta` com `number` sequencial `OS-000001...`, grava o histórico `null -> aberta` e aceita `vehicle_id` (404 se inexistente/excluído), `checkin_id` opcional (404 se inexistente; 422 se for de outro veículo), `mechanic_id` opcional (422 se não for um usuário **ativo** com perfil mecânico), `reported_issue`, `labor_cost` e `due_date`. O `number` é derivado do `id` autoincrementado dentro da transação do INSERT (índice único; sem colisão em concorrência; nunca reutilizado, pode haver lacunas se uma transação for desfeita). `GET /{id}` devolve itens, histórico, resumo do veículo, do cliente e do mecânico. O `total` **nunca** é aceito do cliente (422): é `labor_cost + Σ(qty × unit_price)` recalculado no servidor a cada mudança de itens/mão de obra, com `Decimal` e `ROUND_HALF_UP` a 2 casas, arredondando **cada linha** (`line_total`) antes de somar; acima de 99.999.999,99 dá 422. Máximo de 200 itens por OS.
+
+Formato do dinheiro: **strings decimais fixas** no JSON de saída (`"59.99"`; `qty` com 3 casas, `"1.500"`), sem perda de precisão; na entrada aceita número ou string. Limites: `labor_cost` e `unit_price` de 0 a 999.999,99 (máx. 2 casas), `qty` de 0,001 a 9.999,999 (máx. 3 casas); negativos, casas a mais ou valores absurdos dão 422. `rule_code` (opcional nos itens) segue `^[a-z0-9_]{1,40}$` e será usado pelo motor preventivo.
+
+Estados e transições (qualquer outra: 422 listando as permitidas; `entregue` é terminal):
+
+```
+ aberta --> aguardando_orcamento --> aguardando_aprovacao --> em_execucao --> finalizada --> entregue
+                    ^                        |
+                    +------------------------+   (orçamento recusado/ajustado)
+```
+
+| Transição | admin | recepção | mecânico |
+|---|:-:|:-:|:-:|
+| `aberta -> aguardando_orcamento` | sim | sim | não |
+| `aguardando_orcamento -> aguardando_aprovacao` | sim | sim | não |
+| `aguardando_aprovacao -> em_execucao` | sim | sim | não |
+| `aguardando_aprovacao -> aguardando_orcamento` | sim | sim | não |
+| `em_execucao -> finalizada` | sim | não | só se a OS for dele |
+| `finalizada -> entregue` | sim | sim | não |
+
+Demais regras de perfil (decisões conservadoras): criar OS e excluir (`DELETE`, lógica, só admin e só em `aberta`, senão 422) não são do mecânico; a **recepção não finaliza** (só admin ou o mecânico atribuído). O **mecânico** só lista/lê OS atribuídas a ele (qualquer outra devolve **404**, nunca 403, para não revelar a existência; o filtro `mechanic_id` de outro mecânico retorna vazio), pode editar **apenas** `diagnosis` no `PATCH` (qualquer outro campo: 403) e gerenciar itens da própria OS. Itens só mudam antes de `finalizada` (422 depois). `PATCH` em OS `finalizada` só aceita `diagnosis` e `due_date`; em `entregue` nada (422). `mechanic_id` só é alterado por admin/recepção. Respostas de `POST/PATCH` de itens e de `status` devolvem o detalhe completo (com o novo total); `DELETE` devolve 204. Todo erro de transição ou de permissão é detectado antes de gravar: a transação é desfeita e nenhuma linha de histórico é criada.
 
 ## Armazenamento de fotos
 
