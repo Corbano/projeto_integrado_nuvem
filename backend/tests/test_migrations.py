@@ -176,3 +176,39 @@ def test_migration_0006_creates_and_drops_checkin_tables(tmp_path):
     after = inspect(create_engine(url)).get_table_names()
     assert not {"checkins", "checkin_checklist_items", "checkin_photos"} & set(after)
     assert "km_readings" in after
+
+
+def test_migration_0007_creates_and_drops_service_order_tables(tmp_path):
+    url = f"sqlite:///{tmp_path / 'migration_service_orders.db'}"
+    cfg = alembic_config(url)
+
+    command.upgrade(cfg, "head")
+    inspector = inspect(create_engine(url))
+
+    assert {
+        "id", "number", "vehicle_id", "checkin_id", "mechanic_id", "reported_issue",
+        "diagnosis", "labor_cost", "total", "due_date", "status", "created_at",
+        "updated_at", "deleted_at", "created_by_id", "updated_by_id",
+    } <= {c["name"] for c in inspector.get_columns("service_orders")}
+    assert {
+        "id", "service_order_id", "kind", "description", "qty", "unit_price", "rule_code",
+        "created_at",
+    } <= {c["name"] for c in inspector.get_columns("service_order_items")}
+    assert {
+        "id", "service_order_id", "from_status", "to_status", "changed_by_id", "changed_at",
+    } <= {c["name"] for c in inspector.get_columns("service_order_status_history")}
+    indexes = inspector.get_indexes("service_orders")
+    assert any(ix["unique"] and ix["column_names"] == ["number"] for ix in indexes)
+    assert {("vehicle_id",), ("mechanic_id",), ("status",)} <= {
+        tuple(ix["column_names"]) for ix in indexes
+    }
+    assert {fk["referred_table"] for fk in inspector.get_foreign_keys("service_orders")} == {
+        "users", "vehicles", "checkins",
+    }
+
+    command.downgrade(cfg, "0006")
+    after = inspect(create_engine(url)).get_table_names()
+    assert not {
+        "service_orders", "service_order_items", "service_order_status_history"
+    } & set(after)
+    assert "checkins" in after
