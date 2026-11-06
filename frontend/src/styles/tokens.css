@@ -1,0 +1,36 @@
+@import "@fontsource/barlow-condensed/latin-600.css";
+@import "@fontsource/barlow-condensed/latin-700.css";
+@import "@fontsource/barlow-condensed/latin-ext-600.css";
+@import "@fontsource/barlow-condensed/latin-ext-700.css";
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-sans/latin-ext-400.css";
+@import "@fontsource/ibm-plex-sans/latin-ext-500.css";
+@import "@fontsource/ibm-plex-sans/latin-ext-600.css";
+
+@theme {
+  --color-concreto: #e7eaeb;
+  --color-bancada: #f8f9f9;
+  --color-chassi: #15262d;
+  --color-esmalte: #0e5a6b;
+  --color-oleo: #d68a00;
+  --color-freio: #bf3b2d;
+  --color-sinal: #2e7a4d;
+  --color-risco: #c9d0d2;
+
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+
+  --radius-placa: 6px;
+  --radius-campo: 4px;
+  --radius-dialogo: 10px;
+
+  --text-xs: 13px;
+  --text-sm: 15px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 22px;
+  --text-2xl: 30px;
+  --text-3xl: 44px;
+}
