@@ -37,18 +37,36 @@ describe('Button', () => {
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
-  it('não dispara onClick com loading e marca aria-busy', async () => {
+  it('não dispara onClick com loading, marca aria-busy e mantém o foco', async () => {
     const onClick = vi.fn()
-    render(
-      <Button loading onClick={onClick}>
-        Entrar
-      </Button>,
-    )
+    function Harness() {
+      const [loading, setLoading] = useState(false)
+      return (
+        <Button
+          loading={loading}
+          onClick={() => {
+            onClick()
+            setLoading(true)
+          }}
+        >
+          Entrar
+        </Button>
+      )
+    }
+    render(<Harness />)
     const button = screen.getByRole('button', { name: /Entrar/ })
-    expect(button).toHaveAttribute('aria-busy', 'true')
-    expect(button).toBeDisabled()
     await userEvent.click(button)
-    expect(onClick).not.toHaveBeenCalled()
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).toHaveFocus()
+    await userEvent.click(button)
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('usa disabled nativo quando desabilitado sem loading', () => {
+    render(<Button disabled>Salvar</Button>)
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled()
   })
 })
 
@@ -63,6 +81,33 @@ describe('Field', () => {
     expect(input).toHaveAttribute('aria-invalid', 'true')
     expect(input).toBeRequired()
     expect(input).toHaveAccessibleDescription('Usado para entrar E-mail já cadastrado.')
+  })
+
+  it('mescla aria-describedby, aria-invalid e required do filho', () => {
+    render(
+      <Field label="Senha" hint="Mínimo de 8 caracteres" error="Muito curta" required>
+        <Input id="minha-senha" aria-describedby="externo" aria-invalid="false" />
+      </Field>,
+    )
+    const input = screen.getByLabelText(/Senha/)
+    expect(input).toHaveAttribute('id', 'minha-senha')
+    const describedBy = (input.getAttribute('aria-describedby') ?? '').split(' ')
+    expect(describedBy).toContain('externo')
+    expect(describedBy).toHaveLength(3)
+    expect(new Set(describedBy).size).toBe(3)
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('preserva o que é do filho quando Field não tem nada a somar', () => {
+    render(
+      <Field label="Nome">
+        <Input aria-describedby="externo" aria-invalid required />
+      </Field>,
+    )
+    const input = screen.getByLabelText(/Nome/)
+    expect(input).toHaveAttribute('aria-describedby', 'externo')
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toBeRequired()
   })
 
   it('sem erro não marca aria-invalid', () => {
@@ -171,6 +216,100 @@ describe('Dialog', () => {
   })
 })
 
+describe('Dialog: foco e inert', () => {
+  function LoadingHarness() {
+    const [loading, setLoading] = useState(false)
+    return (
+      <>
+        <button>Fora</button>
+        <ConfirmDialog
+          open
+          title="Excluir"
+          loading={loading}
+          onConfirm={() => setLoading(true)}
+          onCancel={() => {}}
+        />
+      </>
+    )
+  }
+
+  it('mantém o foco dentro quando o botão focado fica em loading e o Tab não sai', async () => {
+    render(<LoadingHarness />)
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    await userEvent.tab()
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    await userEvent.tab()
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+  })
+
+  it('puxa o foco de volta quando ele vai para fora', () => {
+    render(<LoadingHarness />)
+    const outside = screen.getByRole('button', { name: 'Fora' })
+    act(() => outside.focus())
+    expect(screen.getByRole('dialog')).toContainElement(document.activeElement as HTMLElement)
+  })
+
+  it('o Tab com o foco no body entra no dialog', async () => {
+    render(<LoadingHarness />)
+    act(() => (document.activeElement as HTMLElement).blur())
+    await userEvent.tab()
+    expect(screen.getByRole('dialog')).toContainElement(document.activeElement as HTMLElement)
+  })
+
+  it('marca inert nos irmãos enquanto aberto e restaura ao fechar', async () => {
+    const { container } = render(<DialogHarness />)
+    expect(container).not.toHaveAttribute('inert')
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir' }))
+    expect(container).toHaveAttribute('inert')
+    expect(screen.getByRole('dialog').parentElement).not.toHaveAttribute('inert')
+    await userEvent.keyboard('{Escape}')
+    expect(container).not.toHaveAttribute('inert')
+  })
+
+  it('prefere data-autofocus como foco inicial', () => {
+    render(
+      <Dialog open onClose={() => {}} title="T">
+        <button>Primeiro</button>
+        <button data-autofocus>Preferido</button>
+      </Dialog>,
+    )
+    expect(screen.getByRole('button', { name: 'Preferido' })).toHaveFocus()
+  })
+})
+
+describe('Dialog aninhado', () => {
+  function Nested() {
+    const [a, setA] = useState(true)
+    const [b, setB] = useState(false)
+    return (
+      <>
+        <Dialog open={a} onClose={() => setA(false)} title="A">
+          <button onClick={() => setB(true)}>Abrir B</button>
+        </Dialog>
+        <Dialog open={b} onClose={() => setB(false)} title="B">
+          <button>Dentro de B</button>
+        </Dialog>
+      </>
+    )
+  }
+
+  it('Esc fecha só o de cima e o scroll lock volta só depois do último', async () => {
+    render(<Nested />)
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir B', hidden: true }))
+    expect(screen.getAllByRole('dialog', { hidden: true })).toHaveLength(2)
+    expect(document.body.style.overflow).toBe('hidden')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getAllByRole('dialog', { hidden: true })).toHaveLength(1)
+    expect(screen.getByRole('dialog', { name: 'A', hidden: true })).toBeInTheDocument()
+    expect(document.body.style.overflow).toBe('hidden')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { hidden: true })).not.toBeInTheDocument()
+    expect(document.body.style.overflow).toBe('')
+  })
+})
+
 describe('ConfirmDialog', () => {
   it('chama onConfirm e onCancel', async () => {
     const onConfirm = vi.fn()
@@ -221,6 +360,17 @@ describe('Toast', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Usuário criado')
     await userEvent.click(screen.getByRole('button', { name: 'erro' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Falha ao salvar')
+    expect(screen.getByRole('status')).not.toHaveTextContent('Falha ao salvar')
+  })
+
+  it('mantém as duas regiões vivas no DOM mesmo vazias', () => {
+    render(
+      <ToastProvider>
+        <span />
+      </ToastProvider>,
+    )
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
+    expect(screen.getByRole('alert')).toHaveAttribute('aria-live', 'assertive')
   })
 
   it('fecha pelo botão', async () => {
@@ -231,7 +381,7 @@ describe('Toast', () => {
     )
     await userEvent.click(screen.getByRole('button', { name: 'ok' }))
     await userEvent.click(screen.getByRole('button', { name: 'Fechar aviso' }))
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('some sozinho após ~5s, mas pausa com o mouse em cima', () => {
@@ -244,7 +394,7 @@ describe('Toast', () => {
     act(() => {
       screen.getByRole('button', { name: 'ok' }).click()
     })
-    const toast = screen.getByRole('status')
+    const toast = screen.getByText('Usuário criado').closest('div') as HTMLElement
     act(() => {
       vi.advanceTimersByTime(3000)
     })
@@ -254,12 +404,12 @@ describe('Toast', () => {
     act(() => {
       vi.advanceTimersByTime(10000)
     })
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Usuário criado')
     act(() => {
       toast.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
       vi.advanceTimersByTime(5100)
     })
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('useToast fora do provider falha com mensagem clara', () => {
@@ -279,14 +429,15 @@ describe('Table', () => {
           </tr>
         </thead>
         <tbody>
-          <Tr status="inactive">
+          <Tr status="inactive" statusLabel="Inativo">
             <Td>Ana</Td>
           </Tr>
         </tbody>
       </Table>,
     )
     expect(screen.getByRole('columnheader', { name: 'Nome' })).toHaveAttribute('scope', 'col')
-    expect(screen.getByRole('cell', { name: 'Ana' }).closest('tr')).toHaveAttribute('data-status', 'inactive')
+    expect(screen.getByRole('cell', { name: /Ana/ }).closest('tr')).toHaveAttribute('data-status', 'inactive')
+    expect(screen.getByText('Inativo')).toHaveClass('sr-only')
   })
 })
 

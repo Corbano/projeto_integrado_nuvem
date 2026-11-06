@@ -1,4 +1,5 @@
-import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from 'react'
+import { Children, cloneElement, isValidElement } from 'react'
+import type { HTMLAttributes, ReactElement, ReactNode, TdHTMLAttributes, ThHTMLAttributes } from 'react'
 import { cn } from './cn'
 
 export type RowStatus = 'neutral' | 'active' | 'inactive' | 'attention' | 'critical' | 'ok'
@@ -42,14 +43,38 @@ export function Td({ className, ...rest }: TdHTMLAttributes<HTMLTableCellElement
 export interface TrProps extends HTMLAttributes<HTMLTableRowElement> {
   /** Barra de status de 3 px na borda esquerda da linha. */
   status?: RowStatus
+  /**
+   * Texto so para leitores de tela, na primeira celula, para o estado nao depender so de cor.
+   * As paginas tambem devem mostrar um Badge visivel.
+   */
+  statusLabel?: string
 }
 
-export function Tr({ status, className, ...rest }: TrProps) {
+export function Tr({ status, statusLabel, className, children, ...rest }: TrProps) {
+  let content = children
+  if (statusLabel) {
+    const [first, ...others] = Children.toArray(children)
+    if (isValidElement<{ children?: ReactNode }>(first)) {
+      content = [
+        cloneElement(
+          first as ReactElement<{ children?: ReactNode }>,
+          { key: 'status-cell' },
+          <span key="status-label" className="sr-only">
+            {statusLabel}{' '}
+          </span>,
+          first.props.children,
+        ),
+        ...others,
+      ]
+    }
+  }
   return (
     <tr
       {...rest}
       data-status={status}
       className={cn('border-b border-risco last:border-b-0', status && statusBar[status], className)}
-    />
+    >
+      {content}
+    </tr>
   )
 }

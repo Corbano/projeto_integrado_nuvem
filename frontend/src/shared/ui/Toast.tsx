@@ -46,11 +46,8 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
     return () => clearTimeout(timer.current)
   }, [start])
 
-  const isError = toast.kind === 'error'
   return (
     <div
-      role={isError ? 'alert' : 'status'}
-      aria-live={isError ? 'assertive' : 'polite'}
       onMouseEnter={pause}
       onMouseLeave={resume}
       onFocus={pause}
@@ -94,11 +91,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
       <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[60] flex flex-col items-end gap-2 sm:left-auto sm:w-96">
-        {toasts.map((toast) => (
-          <div key={toast.id} className="pointer-events-auto w-full">
-            <ToastView toast={toast} onDismiss={dismiss} />
-          </div>
-        ))}
+        {/* Regioes vivas persistentes: precisam existir antes do conteudo para o leitor de tela anunciar. */}
+        <div role="status" aria-live="polite" className="flex w-full flex-col items-end gap-2">
+          {toasts
+            .filter((t) => t.kind !== 'error')
+            .map((toast) => (
+              <div key={toast.id} className="pointer-events-auto w-full">
+                <ToastView toast={toast} onDismiss={dismiss} />
+              </div>
+            ))}
+        </div>
+        <div role="alert" aria-live="assertive" className="flex w-full flex-col items-end gap-2">
+          {toasts
+            .filter((t) => t.kind === 'error')
+            .map((toast) => (
+              <div key={toast.id} className="pointer-events-auto w-full">
+                <ToastView toast={toast} onDismiss={dismiss} />
+              </div>
+            ))}
+        </div>
       </div>
     </ToastContext.Provider>
   )

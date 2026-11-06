@@ -6,25 +6,39 @@ export interface FieldProps {
   hint?: string
   error?: string
   required?: boolean
-  /** Um unico controle (Input, Select...). Recebe id, aria-describedby, aria-invalid e required. */
+  /**
+   * Exatamente um elemento filho (Input, Select...). Field MESCLA seus props com os do filho:
+   * aria-describedby (uniao), aria-invalid (do filho ou invalido) e required (OU); mantem o id do filho.
+   * Formularios que usam `required` devem pôr `noValidate` no <form>: a validacao e feita no React.
+   */
   children: ReactElement
   className?: string
 }
 
+interface ControlProps {
+  id?: string
+  'aria-describedby'?: string
+  'aria-invalid'?: boolean | 'true' | 'false' | 'grammar' | 'spelling'
+  required?: boolean
+}
+
 export function Field({ label, hint, error, required, children, className }: FieldProps) {
   const uid = useId()
-  const only = Children.only(children)
-  const controlProps = isValidElement<{ id?: string }>(only) ? only.props : {}
-  const id = controlProps.id ?? `field-${uid}`
+  const only = Children.only(children) as ReactElement<ControlProps>
+  const own = isValidElement<ControlProps>(only) ? only.props : {}
+  const id = own.id ?? `field-${uid}`
   const hintId = hint ? `${id}-hint` : undefined
   const errorId = error ? `${id}-error` : undefined
-  const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
+  const ids = [...(own['aria-describedby']?.split(/\s+/) ?? []), hintId, errorId].filter(
+    (value): value is string => Boolean(value),
+  )
+  const describedBy = ids.length > 0 ? Array.from(new Set(ids)).join(' ') : undefined
 
-  const control: ReactNode = cloneElement(only as ReactElement<Record<string, unknown>>, {
+  const control: ReactNode = cloneElement(only, {
     id,
     'aria-describedby': describedBy,
-    'aria-invalid': error ? true : undefined,
-    required: required || undefined,
+    'aria-invalid': error ? true : own['aria-invalid'],
+    required: required || own.required || undefined,
   })
 
   return (

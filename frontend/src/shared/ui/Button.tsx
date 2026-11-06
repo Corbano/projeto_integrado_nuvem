@@ -35,6 +35,7 @@ export function Button({
   variant = 'primary',
   loading = false,
   disabled,
+  onClick,
   type = 'button',
   className,
   children,
@@ -44,11 +45,19 @@ export function Button({
     <button
       {...rest}
       type={type}
-      disabled={disabled || loading}
+      disabled={disabled}
+      aria-disabled={loading || undefined}
+      onClick={(event) => {
+        if (loading) {
+          event.preventDefault()
+          return
+        }
+        onClick?.(event)
+      }}
       aria-busy={loading || undefined}
       className={cn(
         'inline-flex min-h-11 items-center justify-center gap-2 rounded-campo px-4 font-sans text-corpo font-semibold',
-        'transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+        'transition-colors disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-progress aria-disabled:opacity-80',
         variants[variant],
         className,
       )}
