@@ -14,7 +14,7 @@ function HomePlaceholder() {
     <main className="p-8">
       <h1 className="text-titulo">Início</h1>
       <p className="mt-2 text-corpo">Olá, {user?.name}.</p>
-      <button type="button" onClick={logout} className="mt-4 text-corpo font-semibold text-esmalte underline">
+      <button type="button" onClick={logout} className="mt-4 text-corpo font-semibold text-azul underline underline-offset-2">
         Sair
       </button>
     </main>
