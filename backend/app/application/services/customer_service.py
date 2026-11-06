@@ -53,11 +53,11 @@ class CustomerService:
         customer.updated_by_id = actor_id
         return CustomerOut.from_entity(self._customers.update(customer))
 
-    def delete(self, customer_id: int) -> None:
+    def delete(self, customer_id: int, *, actor_id: int) -> None:
         self._get_or_404(customer_id)
         if self._customers.has_vehicles(customer_id):
             raise BusinessRuleError("Cliente possui veículos cadastrados")
-        self._customers.soft_delete(customer_id)
+        self._customers.soft_delete(customer_id, actor_id=actor_id)
 
     def _get_or_404(self, customer_id: int) -> Customer:
         customer = self._customers.get_by_id(customer_id)

@@ -56,3 +56,35 @@ def test_migration_0002_creates_and_drops_customers(tmp_path):
     after = inspect(create_engine(url))
     assert "customers" not in after.get_table_names()
     assert "users" in after.get_table_names()
+
+
+def test_migration_0003_adds_unique_active_document_and_downgrades(tmp_path):
+    url = f"sqlite:///{tmp_path / 'migration_active_document.db'}"
+    cfg = alembic_config(url)
+
+    command.upgrade(cfg, "0002")
+    engine = create_engine(url)
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "INSERT INTO customers (name, document, deleted_at) VALUES "
+            "('Ativo Ficticio', '52998224725', NULL), "
+            "('Excluido Ficticio', '11144477735', '2026-01-01 00:00:00')"
+        )
+    command.upgrade(cfg, "head")
+
+    inspector = inspect(create_engine(url))
+    assert "active_document" in {c["name"] for c in inspector.get_columns("customers")}
+    assert any(
+        ix["unique"] and ix["column_names"] == ["active_document"]
+        for ix in inspector.get_indexes("customers")
+    )
+    with create_engine(url).connect() as conn:
+        rows = dict(
+            conn.exec_driver_sql("SELECT document, active_document FROM customers").fetchall()
+        )
+    assert rows == {"52998224725": "52998224725", "11144477735": None}
+
+    command.downgrade(cfg, "0002")
+    after = inspect(create_engine(url))
+    assert "active_document" not in {c["name"] for c in after.get_columns("customers")}
+    assert "customers" in after.get_table_names()

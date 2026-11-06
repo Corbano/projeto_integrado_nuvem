@@ -16,6 +16,19 @@ def test_normalize_digits_strips_mask():
     assert normalize_digits("11.222.333/0001-81") == "11222333000181"
 
 
+@pytest.mark.parametrize(
+    "value", ["abc52998224725x", "529.982.247-25a", "(52998224725)", "5299822472\u00005"]
+)
+def test_documents_with_foreign_characters_are_invalid(value):
+    assert not is_valid_cpf(value)
+    assert not is_valid_document(value)
+
+
+def test_cnpj_with_foreign_characters_is_invalid():
+    assert not is_valid_cnpj("x11222333000181")
+    assert not is_valid_cnpj("11.222.333/0001-81!")
+
+
 def test_valid_cpf_with_and_without_mask():
     assert is_valid_cpf(VALID_CPF)
     assert is_valid_cpf("529.982.247-25")

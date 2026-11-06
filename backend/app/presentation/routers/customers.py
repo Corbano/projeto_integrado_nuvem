@@ -54,8 +54,8 @@ def update_customer(
 @router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_customer(
     customer_id: int,
-    _actor: User = Depends(require_writer),
+    actor: User = Depends(require_writer),
     service: CustomerService = Depends(get_customer_service),
 ):
-    service.delete(customer_id)
+    service.delete(customer_id, actor_id=actor.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

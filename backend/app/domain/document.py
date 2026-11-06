@@ -8,6 +8,16 @@ def normalize_digits(value: str) -> str:
     return re.sub(r"\D", "", value)
 
 
+_ALLOWED = re.compile(r"[\d.\-/\s]*")
+
+
+def clean_document(value: str) -> str | None:
+    """Só dígitos, ou None se houver caracteres além de dígitos, '.', '-', '/' e espaços."""
+    if not _ALLOWED.fullmatch(value):
+        return None
+    return normalize_digits(value)
+
+
 def _check_digit(digits: str, weights: list[int]) -> int:
     total = sum(int(d) * w for d, w in zip(digits, weights, strict=False))
     rest = total % 11
@@ -15,8 +25,8 @@ def _check_digit(digits: str, weights: list[int]) -> int:
 
 
 def is_valid_cpf(value: str) -> bool:
-    digits = normalize_digits(value)
-    if len(digits) != 11 or len(set(digits)) == 1:
+    digits = clean_document(value)
+    if digits is None or len(digits) != 11 or len(set(digits)) == 1:
         return False
     first = _check_digit(digits[:9], list(range(10, 1, -1)))
     second = _check_digit(digits[:10], list(range(11, 1, -1)))
@@ -28,8 +38,8 @@ _CNPJ_W2 = [6, *_CNPJ_W1]
 
 
 def is_valid_cnpj(value: str) -> bool:
-    digits = normalize_digits(value)
-    if len(digits) != 14 or len(set(digits)) == 1:
+    digits = clean_document(value)
+    if digits is None or len(digits) != 14 or len(set(digits)) == 1:
         return False
     first = _check_digit(digits[:12], _CNPJ_W1)
     second = _check_digit(digits[:13], _CNPJ_W2)

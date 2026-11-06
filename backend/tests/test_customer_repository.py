@@ -47,6 +47,30 @@ def test_document_exists_ignores_deleted_and_supports_exclude(repo):
     assert not repo.document_exists(CPF_A)
 
 
+def test_db_rejects_duplicate_document_without_precheck(repo):
+    repo.add(new_customer())
+
+    with pytest.raises(ConflictError):
+        repo.add(new_customer(name="Corrida"))
+
+
+def test_update_to_taken_document_raises_conflict(repo):
+    repo.add(new_customer())
+    second = repo.add(new_customer(document=CPF_B, name="Segundo"))
+    second.document = CPF_A
+
+    with pytest.raises(ConflictError):
+        repo.update(second)
+
+
+def test_soft_delete_records_actor_and_frees_document(repo):
+    saved = repo.add(new_customer())
+
+    repo.soft_delete(saved.id, actor_id=None)
+
+    assert repo.add(new_customer(name="Reuso")).id != saved.id
+
+
 def test_soft_deleted_document_can_be_reused(repo):
     saved = repo.add(new_customer())
     repo.soft_delete(saved.id)

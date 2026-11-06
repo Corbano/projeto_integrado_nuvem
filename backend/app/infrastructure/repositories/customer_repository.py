@@ -67,11 +67,10 @@ class SqlCustomerRepository:
         return bool(self._db.scalar(stmt))
 
     def add(self, customer: Customer) -> Customer:
-        if self.document_exists(customer.document):
-            raise ConflictError(_DUPLICATE)
         model = CustomerModel(
             name=customer.name,
             document=customer.document,
+            active_document=customer.document,
             phone=customer.phone,
             email=customer.email,
             notes=customer.notes,
@@ -85,10 +84,9 @@ class SqlCustomerRepository:
 
     def update(self, customer: Customer) -> Customer:
         model = self._get_alive_model(customer.id)
-        if self.document_exists(customer.document, exclude_id=customer.id):
-            raise ConflictError(_DUPLICATE)
         model.name = customer.name
         model.document = customer.document
+        model.active_document = customer.document
         model.phone = customer.phone
         model.email = customer.email
         model.notes = customer.notes
@@ -97,8 +95,10 @@ class SqlCustomerRepository:
         self._db.refresh(model)
         return self._to_entity(model)
 
-    def soft_delete(self, customer_id: int) -> None:
+    def soft_delete(self, customer_id: int, *, actor_id: int | None = None) -> None:
         model = self._get_alive_model(customer_id)
+        model.active_document = None
+        model.updated_by_id = actor_id
         model.deleted_at = datetime.now(UTC).replace(tzinfo=None)
         self._db.commit()
 

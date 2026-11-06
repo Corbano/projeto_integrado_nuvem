@@ -1,12 +1,12 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.domain.customer import Customer
-from app.domain.document import is_valid_document, normalize_digits
+from app.domain.document import clean_document, is_valid_document, normalize_digits
 
 
 def _clean_document(value: str) -> str:
-    digits = normalize_digits(value)
-    if not is_valid_document(digits):
+    digits = clean_document(value)
+    if digits is None or not is_valid_document(digits):
         raise ValueError("CPF/CNPJ inválido")
     return digits
 

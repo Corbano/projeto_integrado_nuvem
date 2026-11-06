@@ -15,6 +15,7 @@
 - RBAC (usar `require_roles`): salvo indicação, **admin e recepção** escrevem; **mecânico** só lê.
 - Testes de API usam as fixtures existentes (`client`, `auth_header`, `make_user`); cada tarefa cobre: caminho feliz, validação (422), duplicidade (409), 404, permissão (403/401), paginação/busca, soft delete.
 - Sem credenciais no código. UTF-8 sem BOM (usar Write/Edit; no PowerShell nunca `Out-File`/`Set-Content`). Sem push. Commits pequenos com trailer `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` (segundo `-m`) e **caminhos explícitos** no `git add`/`git commit`.
+- Numeração de migrações: a `0003` foi usada na B1 (`active_document`); sequência real: veículos `0004`, km `0005`, check-in `0006`, ordens de serviço `0007`.
 - Gates por tarefa: `cd backend; .\.venv\Scripts\python -m pytest -q` e `.\.venv\Scripts\ruff check .` verdes. Atualizar o `backend/README.md` (seção de endpoints) ao final de cada tarefa.
 
 ---
