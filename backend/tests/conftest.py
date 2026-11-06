@@ -95,3 +95,55 @@ def auth_header(client, make_user):
         return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
     return _header
+
+
+class FakeStorage:
+    """Armazenamento em memória que registra os parâmetros recebidos."""
+
+    def __init__(self) -> None:
+        self.objects: dict[str, tuple[bytes, str | None]] = {}
+        self.presign_uploads: list[dict] = []
+        self.presign_downloads: list[dict] = []
+        self.deleted: list[str] = []
+
+    def put(self, key, data: bytes, content_type: str | None = None) -> None:
+        self.objects[key] = (data, content_type)
+
+    def presign_upload(self, key, content_type, max_bytes, expires_in=900):
+        from app.application.ports import PresignedUpload
+
+        self.presign_uploads.append(
+            {"key": key, "content_type": content_type, "max_bytes": max_bytes,
+             "expires_in": expires_in}
+        )
+        return PresignedUpload(
+            url="https://fake-bucket.example/", method="POST", fields={"key": key}
+        )
+
+    def presign_download(self, key, expires_in=900):
+        self.presign_downloads.append({"key": key, "expires_in": expires_in})
+        return f"https://fake-bucket.example/{key}?expires_in={expires_in}"
+
+    def exists(self, key) -> bool:
+        return key in self.objects
+
+    def stat(self, key):
+        from app.application.ports import StoredObject
+
+        if key not in self.objects:
+            return None
+        data, content_type = self.objects[key]
+        return StoredObject(size_bytes=len(data), content_type=content_type)
+
+    def delete(self, key) -> None:
+        self.deleted.append(key)
+        self.objects.pop(key, None)
+
+
+@pytest.fixture
+def storage(client):
+    from app.presentation.deps import get_file_storage
+
+    fake = FakeStorage()
+    client.app.dependency_overrides[get_file_storage] = lambda: fake
+    return fake

@@ -50,6 +50,7 @@ ruff check .
 | Clientes | `GET /customers` (`page`, `size`, `q` por nome/documento/telefone/e-mail), `POST /customers`, `GET,PATCH,DELETE /customers/{id}` | leitura: qualquer perfil autenticado; escrita: admin e recepção |
 | Veículos | `GET /vehicles` (`page`, `size`, `q` por placa/marca/modelo, `customer_id`), `POST /vehicles`, `GET,PATCH,DELETE /vehicles/{id}`, `GET /customers/{id}/vehicles` | leitura: qualquer perfil autenticado; escrita: admin e recepção |
 | Quilometragem | `POST /vehicles/{id}/km` (`km`, `note?`, `force?`), `GET /vehicles/{id}/km` (`page`, `size`, mais recentes primeiro) | leitura: qualquer perfil autenticado; registro: admin, recepção e mecânico (`force`: só admin) |
+| Check-in | `GET /checkins` (`page`, `size`, `vehicle_id`), `POST /checkins`, `GET /checkins/{id}` (checklist + fotos), `POST /checkins/{id}/photos/presign`, `POST /checkins/{id}/photos/{photo_id}/confirm`, `DELETE /checkins/{id}/photos/{photo_id}` | leitura: qualquer perfil autenticado; escrita (incl. fotos): admin e recepção |
 
 Clientes: `document` aceita CPF ou CNPJ (com ou sem máscara, validado pelos dígitos
 verificadores) e é armazenado só com dígitos; único entre não excluídos (409). `phone`
@@ -66,6 +67,23 @@ somente leitura e é rejeitado (422) em POST/PATCH. `customer_id` pode ser alter
 (transferência). `GET /vehicles/{id}` inclui o resumo do cliente (`id`, `name`).
 
 Quilometragem: `POST /vehicles/{id}/km` grava a leitura e atualiza `vehicles.current_km` na mesma transação. Valor menor que o atual é rejeitado (422 "A quilometragem não pode diminuir"); igual é idempotente (devolve a última leitura, sem criar outra); limite de 0 a 5.000.000. `force=true` (somente admin, 403 para os demais) permite diminuir e exige `note`. `KmService.register` (confirma) e `KmService.record` (não confirma, para compor a transação de check-in/OS) são reutilizáveis.
+
+Check-in: `POST /checkins` exige os 7 itens do checklist (`pneus`, `suspensao`, `freios`, `iluminacao`, `bateria`, `ar_condicionado`, `limpadores`), cada um exatamente uma vez com `condition` `ok|atencao|critico` (faltando/repetido: 422), e `fuel_level` `vazio|quarto|meio|tres_quartos|cheio`. A quilometragem é registrada via `KmService.record` (origem `checkin`) **na mesma transação**: km menor que o atual dá 422 e nada é criado; igual é aceito sem nova leitura. Mecânico não cria check-in (403).
+
+Fotos (máx. 10 por check-in, `image/jpeg|png|webp`, até 8 MB): `presign` valida tipo/tamanho/limite (confirmadas + reservas pendentes de até 15 min) e devolve `{photo_id, upload: {url, method, fields, headers}, expires_in}`; o cliente envia o arquivo direto ao S3 e chama `confirm`, que só confirma se o objeto existe no armazenamento com tipo/tamanho válidos (senão 422; objeto fora do combinado é descartado). `GET /checkins/{id}` devolve as fotos com `download_url` assinada de 15 minutos apenas para as confirmadas. A chave do objeto é `checkins/{checkin_id}/{uuid4}.{ext}`, com a extensão vinda do tipo validado, nunca do nome do arquivo.
+
+## Armazenamento de fotos
+
+`STORAGE_BACKEND=local` (padrão, dev/testes) grava em `backend/.storage/` (ignorado pelo git) e não expõe nenhum endpoint de upload: o presign devolve uma URL fictícia `local://...` e os arquivos entram via `LocalFileStorage.put` (usado nos testes). `STORAGE_BACKEND=s3` usa o bucket `S3_BUCKET` na região `S3_REGION`; as credenciais vêm **somente** da cadeia padrão do boto3 (role da instância EC2), nunca de variáveis do app. Com `ENVIRONMENT=production` a aplicação não inicia sem `STORAGE_BACKEND=s3` e `S3_BUCKET`.
+
+O upload usa **POST pré-assinado** (não PUT): a política assinada impõe no próprio S3 o `Content-Type` e `content-length-range` (1 byte a 8 MB), o que um PUT pré-assinado não consegue garantir. O cliente envia um `multipart/form-data` com todos os `fields` devolvidos e, por último, o campo `file`.
+
+Recomendações para o bucket:
+
+- Bucket **privado**, com *Block Public Access* ativo nas 4 opções e criptografia padrão (SSE-S3 ou KMS); leitura só por URL assinada.
+- **CORS** liberando apenas a origem do frontend (ex.: `https://app.exemplo.com`), métodos `POST` e `PUT`, cabeçalhos `*` e `ExposeHeaders: ETag`.
+- Permissões da role IAM da instância EC2, restritas ao prefixo: `s3:PutObject`, `s3:GetObject` e `s3:DeleteObject` em `arn:aws:s3:::SEU-BUCKET/checkins/*` (nada de `s3:*` nem `ListBucket` público).
+- Opcional: regra de ciclo de vida para expirar uploads incompletos/órfãos (reservas nunca confirmadas) sob `checkins/`.
 
 ## Variáveis de ambiente
 
