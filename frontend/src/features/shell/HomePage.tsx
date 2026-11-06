@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { PageHeader, StatusPill } from '../../shared/ui'
+import { PageHeader, ProgressBar, StatusPill } from '../../shared/ui'
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle'
 import { useAuth } from '../auth/useAuth'
 import {
@@ -51,6 +51,7 @@ export function HomePage() {
   const now = useNow()
   const status = useApiStatus()
   const modules = modulesForRole(user?.role)
+  const finished = modules.filter((m) => m.available).length
   const revenue = useMemo(() => buildRevenueSeries(now), [now])
   const agendaDays = useMemo(() => buildAgendaDays(now), [now])
   const firstName = user?.name.trim().split(/\s+/)[0] ?? ''
@@ -71,6 +72,17 @@ export function HomePage() {
         <h2 id="funcionalidades" className="mb-5 text-secao font-bold text-navy">
           Funcionalidades
         </h2>
+        <div className="mb-6 max-w-md">
+          <p data-testid="resumo-modulos" className="mb-2 text-corpo font-semibold text-tinta">
+            {finished} de {modules.length} módulos concluídos
+          </p>
+          <ProgressBar
+            value={finished}
+            max={modules.length}
+            label={`${finished} de ${modules.length} módulos concluídos`}
+            tone="azul"
+          />
+        </div>
         <div className="@container">
           <ul className="grid grid-cols-1 gap-5 @min-[560px]:grid-cols-2 @min-[1040px]:grid-cols-4 @min-[1040px]:gap-6">
             {modules.map((module) => (

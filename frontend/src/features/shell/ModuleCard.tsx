@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { Card, CardBody, CardDescription, CardFooter, CardHeader, CardTitle, icon } from '../../shared/ui'
+import { Card, CardBody, CardDescription, CardFooter, CardHeader, CardTitle, StatusPill, icon } from '../../shared/ui'
 import type { AccentColor } from '../../shared/ui'
 import { cn } from '../../shared/ui/cn'
 import type { AppModule } from './modules'
@@ -22,7 +22,7 @@ const PURE: Record<AccentColor, string> = {
 }
 
 const buttonBase =
-  'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-controle border px-4 text-corpo font-semibold'
+  'inline-flex min-h-11 min-w-[9rem] flex-1 items-center justify-center gap-2 rounded-controle border px-4 text-corpo font-semibold'
 
 export function ModuleCard({ module }: { module: AppModule }) {
   const Icon = module.icon
@@ -40,6 +40,15 @@ export function ModuleCard({ module }: { module: AppModule }) {
       data-module={module.id}
       className={cn('h-full w-full', !module.available && 'bg-superficie/70')}
     >
+      {module.available && (
+        <span
+          aria-hidden="true"
+          data-testid="modulo-concluido-barra"
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-card"
+        >
+          <span className="absolute inset-x-0 bottom-0 h-1 bg-azul" />
+        </span>
+      )}
       <CardHeader className="pt-5">
         <span
           aria-hidden="true"
@@ -62,7 +71,13 @@ export function ModuleCard({ module }: { module: AppModule }) {
           ))}
         </ul>
       </CardBody>
-      <CardFooter className="pt-0">
+      <CardFooter className="flex flex-wrap items-center gap-3 pt-0">
+        {module.available && (
+          <StatusPill variant="info" dot={false} className="gap-1">
+            <Check {...icon} size={14} strokeWidth={2.5} />
+            Concluído
+          </StatusPill>
+        )}
         {module.available ? (
           <Link
             to={module.route}

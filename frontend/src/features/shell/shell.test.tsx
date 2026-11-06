@@ -9,6 +9,7 @@ import { server } from '../../test/server'
 import { setToken } from '../auth/storage'
 import { SIDEBAR_STORAGE_KEY } from './AppShell'
 import { greetingFor } from './greeting'
+import { MODULES, modulesForRole } from './modules'
 
 const TITLES = [
   'Usuários',
@@ -91,6 +92,35 @@ describe('Início', () => {
     expect(within(nav).queryByText('Usuários')).not.toBeInTheDocument()
     expect(within(nav).queryByText('Financeiro')).not.toBeInTheDocument()
     expect(within(nav).queryByText('Administração')).not.toBeInTheDocument()
+  })
+
+  it('só o módulo concluído mostra a barra azul embaixo e a etiqueta "Concluído"', async () => {
+    renderAt('/')
+    await cards()
+    const usuarios = screen.getByRole('heading', { level: 3, name: 'Usuários' }).closest('article')!
+    expect(within(usuarios).getByText('Concluído')).toBeInTheDocument()
+    expect(within(usuarios).getByTestId('modulo-concluido-barra')).toBeInTheDocument()
+    const clientes = screen.getByRole('heading', { level: 3, name: 'Clientes' }).closest('article')!
+    expect(within(clientes).queryByText('Concluído')).not.toBeInTheDocument()
+    expect(within(clientes).queryByTestId('modulo-concluido-barra')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Concluído')).toHaveLength(MODULES.filter((m) => m.available).length)
+  })
+
+  it('o resumo conta os módulos concluídos do perfil (admin vê 8)', async () => {
+    renderAt('/')
+    await cards()
+    const done = MODULES.filter((m) => m.available).length
+    expect(screen.getByTestId('resumo-modulos')).toHaveTextContent(`${done} de 8 módulos concluídos`)
+    const bar = screen.getByRole('progressbar', { name: `${done} de 8 módulos concluídos` })
+    expect(bar).toHaveAttribute('aria-valuenow', String(Math.round((done / 8) * 100)))
+    expect(bar).toHaveAttribute('aria-valuemax', '100')
+  })
+
+  it('o resumo da recepção conta só os 6 módulos que ela vê', async () => {
+    renderAt('/', 'token-recepcao')
+    await cards()
+    const done = modulesForRole('reception').filter((m) => m.available).length
+    expect(screen.getByTestId('resumo-modulos')).toHaveTextContent(`${done} de 6 módulos concluídos`)
   })
 
   it('módulos indisponíveis não são links nem entram na ordem de tabulação', async () => {
