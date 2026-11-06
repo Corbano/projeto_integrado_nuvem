@@ -49,6 +49,7 @@ ruff check .
 | Usuários | `GET,POST /users`, `GET,PATCH,DELETE /users/{id}` | admin |
 | Clientes | `GET /customers` (`page`, `size`, `q` por nome/documento/telefone/e-mail), `POST /customers`, `GET,PATCH,DELETE /customers/{id}` | leitura: qualquer perfil autenticado; escrita: admin e recepção |
 | Veículos | `GET /vehicles` (`page`, `size`, `q` por placa/marca/modelo, `customer_id`), `POST /vehicles`, `GET,PATCH,DELETE /vehicles/{id}`, `GET /customers/{id}/vehicles` | leitura: qualquer perfil autenticado; escrita: admin e recepção |
+| Quilometragem | `POST /vehicles/{id}/km` (`km`, `note?`, `force?`), `GET /vehicles/{id}/km` (`page`, `size`, mais recentes primeiro) | leitura: qualquer perfil autenticado; registro: admin, recepção e mecânico (`force`: só admin) |
 
 Clientes: `document` aceita CPF ou CNPJ (com ou sem máscara, validado pelos dígitos
 verificadores) e é armazenado só com dígitos; único entre não excluídos (409). `phone`
@@ -63,6 +64,8 @@ excluídos (409, garantido pelo banco via `active_plate`/`active_chassis`) e pod
 após a exclusão lógica. O cliente deve existir e estar ativo (404). `current_km` começa em 0, é
 somente leitura e é rejeitado (422) em POST/PATCH. `customer_id` pode ser alterado no PATCH
 (transferência). `GET /vehicles/{id}` inclui o resumo do cliente (`id`, `name`).
+
+Quilometragem: `POST /vehicles/{id}/km` grava a leitura e atualiza `vehicles.current_km` na mesma transação. Valor menor que o atual é rejeitado (422 "A quilometragem não pode diminuir"); igual é idempotente (devolve a última leitura, sem criar outra); limite de 0 a 5.000.000. `force=true` (somente admin, 403 para os demais) permite diminuir e exige `note`. `KmService.register` (confirma) e `KmService.record` (não confirma, para compor a transação de check-in/OS) são reutilizáveis.
 
 ## Variáveis de ambiente
 

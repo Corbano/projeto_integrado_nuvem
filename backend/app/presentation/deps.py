@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.application.services.auth_service import AuthService
 from app.application.services.customer_service import CustomerService
+from app.application.services.km_service import KmService
 from app.application.services.user_service import UserService
 from app.application.services.vehicle_service import VehicleService
 from app.domain.errors import AuthenticationError, PermissionDeniedError
@@ -11,7 +12,9 @@ from app.domain.roles import Role
 from app.domain.user import User
 from app.infrastructure.config import get_settings
 from app.infrastructure.db.session import get_db
+from app.infrastructure.db.unit_of_work import SqlUnitOfWork
 from app.infrastructure.repositories.customer_repository import SqlCustomerRepository
+from app.infrastructure.repositories.km_repository import SqlKmReadingRepository
 from app.infrastructure.repositories.user_repository import SqlUserRepository
 from app.infrastructure.repositories.vehicle_repository import SqlVehicleRepository
 from app.infrastructure.security import BcryptHasher, JwtCodec
@@ -53,6 +56,10 @@ def get_customer_service(db: Session = Depends(get_db)) -> CustomerService:
 
 def get_vehicle_service(db: Session = Depends(get_db)) -> VehicleService:
     return VehicleService(SqlVehicleRepository(db), SqlCustomerRepository(db))
+
+
+def get_km_service(db: Session = Depends(get_db)) -> KmService:
+    return KmService(SqlKmReadingRepository(db), SqlVehicleRepository(db), SqlUnitOfWork(db))
 
 
 def get_current_user(
