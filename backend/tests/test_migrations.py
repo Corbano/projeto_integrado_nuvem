@@ -141,3 +141,38 @@ def test_migration_0005_creates_and_drops_km_readings(tmp_path):
     after = inspect(create_engine(url))
     assert "km_readings" not in after.get_table_names()
     assert "vehicles" in after.get_table_names()
+
+
+def test_migration_0006_creates_and_drops_checkin_tables(tmp_path):
+    url = f"sqlite:///{tmp_path / 'migration_checkins.db'}"
+    cfg = alembic_config(url)
+
+    command.upgrade(cfg, "head")
+    inspector = inspect(create_engine(url))
+
+    assert {
+        "id", "vehicle_id", "user_id", "km", "fuel_level", "damages", "accessories",
+        "notes", "created_at", "created_by_id",
+    } <= {c["name"] for c in inspector.get_columns("checkins")}
+    assert {"id", "checkin_id", "item", "condition", "note"} <= {
+        c["name"] for c in inspector.get_columns("checkin_checklist_items")
+    }
+    assert {
+        "id", "checkin_id", "storage_key", "content_type", "size_bytes", "created_at",
+        "confirmed_at",
+    } <= {c["name"] for c in inspector.get_columns("checkin_photos")}
+    uniques = {
+        tuple(u["column_names"])
+        for u in inspector.get_unique_constraints("checkin_checklist_items")
+    }
+    assert ("checkin_id", "item") in uniques
+    assert {fk["referred_table"] for fk in inspector.get_foreign_keys("checkins")} == {
+        "users", "vehicles",
+    }
+    indexed = {tuple(ix["column_names"]) for ix in inspector.get_indexes("checkins")}
+    assert ("vehicle_id", "created_at") in indexed
+
+    command.downgrade(cfg, "0005")
+    after = inspect(create_engine(url)).get_table_names()
+    assert not {"checkins", "checkin_checklist_items", "checkin_photos"} & set(after)
+    assert "km_readings" in after
