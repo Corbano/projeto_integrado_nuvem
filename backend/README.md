@@ -29,6 +29,18 @@ O comando `create-admin` aceita a senha de três formas (nesta ordem de precedê
    ```
 3. Prompt interativo `Senha: ` (usado quando nenhuma das anteriores é informada; a digitação não é exibida).
 
+## Dados de demonstração
+
+Popula o banco de **desenvolvimento** com dados fictícios (18 clientes, 28 veículos e leituras de quilometragem), usando os serviços reais e um administrador existente (rode `create-admin` antes):
+
+```powershell
+python -m app.cli seed-demo                      # usa o primeiro administrador ativo
+python -m app.cli seed-demo --actor-email admin@oficina.com
+python -m app.cli seed-demo --count-only         # simula, sem gravar
+```
+
+É idempotente (pula CPF/CNPJ e placas já cadastrados) e recusa rodar com `ENVIRONMENT=production`. Nunca apaga dados.
+
 ## Testes e lint
 
 ```powershell
