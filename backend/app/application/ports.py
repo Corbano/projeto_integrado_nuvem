@@ -11,3 +11,11 @@ class PasswordHasher(Protocol):
 
 class TokenCodec(Protocol):
     def encode(self, user_id: int, role: Role) -> str: ...
+
+
+class UnitOfWork(Protocol):
+    """Fronteira de transação (commit/rollback) compartilhada pelos repositórios."""
+
+    def commit(self) -> None: ...
+
+    def rollback(self) -> None: ...

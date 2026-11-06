@@ -124,6 +124,19 @@ class SqlVehicleRepository:
         model.deleted_at = datetime.now(UTC).replace(tzinfo=None)
         self._db.commit()
 
+    def get_for_update(self, vehicle_id: int) -> Vehicle | None:
+        model = self._db.scalar(
+            self._alive().where(VehicleModel.id == vehicle_id).with_for_update()
+        )
+        return self._to_entity(model) if model else None
+
+    def update_current_km(self, vehicle_id: int, km: int, *, actor_id: int | None) -> None:
+        """Sem commit: o fluxo de quilometragem confirma junto com a leitura."""
+        model = self._get_alive_model(vehicle_id)
+        model.current_km = km
+        model.updated_by_id = actor_id
+        self._db.flush()
+
     def list_page(
         self,
         *,

@@ -93,6 +93,14 @@ class VehicleRepository(Protocol):
 
     def soft_delete(self, vehicle_id: int, *, actor_id: int | None = None) -> None: ...
 
+    def get_for_update(self, vehicle_id: int) -> Vehicle | None:
+        """Como `get_by_id`, mas bloqueia a linha até o fim da transação (quando suportado)."""
+        ...
+
+    def update_current_km(self, vehicle_id: int, km: int, *, actor_id: int | None) -> None:
+        """Único caminho que altera `current_km`. NÃO confirma a transação."""
+        ...
+
     def list_page(
         self,
         *,

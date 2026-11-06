@@ -119,3 +119,25 @@ def test_migration_0004_creates_and_drops_vehicles(tmp_path):
     after = inspect(create_engine(url))
     assert "vehicles" not in after.get_table_names()
     assert "customers" in after.get_table_names()
+
+
+def test_migration_0005_creates_and_drops_km_readings(tmp_path):
+    url = f"sqlite:///{tmp_path / 'migration_km.db'}"
+    cfg = alembic_config(url)
+
+    command.upgrade(cfg, "head")
+    inspector = inspect(create_engine(url))
+    columns = {c["name"] for c in inspector.get_columns("km_readings")}
+
+    assert {
+        "id", "vehicle_id", "km", "source", "note", "recorded_by_id", "created_at",
+    } <= columns
+    indexed = {tuple(ix["column_names"]) for ix in inspector.get_indexes("km_readings")}
+    assert ("vehicle_id", "created_at") in indexed
+    fks = {fk["referred_table"] for fk in inspector.get_foreign_keys("km_readings")}
+    assert fks == {"users", "vehicles"}
+
+    command.downgrade(cfg, "0004")
+    after = inspect(create_engine(url))
+    assert "km_readings" not in after.get_table_names()
+    assert "vehicles" in after.get_table_names()
