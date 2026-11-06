@@ -7,7 +7,7 @@ def login(client, email, password=PASSWORD):
 
 
 def test_login_returns_bearer_token(client, make_user):
-    user = make_user(email="admin@oficina.com")
+    make_user(email="admin@oficina.com")
 
     response = login(client, "admin@oficina.com")
 
@@ -15,7 +15,6 @@ def test_login_returns_bearer_token(client, make_user):
     body = response.json()
     assert body["token_type"] == "bearer"
     assert body["access_token"]
-    assert user.id is not None
 
 
 def test_login_is_case_insensitive_on_email(client, make_user):

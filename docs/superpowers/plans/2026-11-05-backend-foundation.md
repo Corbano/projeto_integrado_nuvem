@@ -1357,6 +1357,9 @@ from app.application.ports import PasswordHasher, TokenCodec
 from app.domain.errors import AuthenticationError
 from app.domain.user import UserRepository
 
+# Hash bcrypt (custo 12) de uma senha descartável; não é segredo. Gerado uma única vez.
+_DUMMY_PASSWORD_HASH = "$2b$12$C1Suo5f5h1ztDpEm5I4lxeSySsgeKyklUnNqCf6brAfneGWBVW3KO"
+
 
 class AuthService:
     def __init__(
@@ -1368,8 +1371,12 @@ class AuthService:
 
     def login(self, email: str, password: str) -> TokenResponse:
         user = self._users.get_by_email(email.lower())
-        # Mesma mensagem para qualquer falha: não revela se o e-mail existe.
-        if user is None or not user.active or not self._hasher.verify(password, user.password_hash):
+        # Sempre executa o verify (contra um hash falso se o usuário não existe) para que o
+        # tempo de resposta não revele se o e-mail existe. Mesma mensagem para qualquer falha.
+        password_ok = self._hasher.verify(
+            password, user.password_hash if user else _DUMMY_PASSWORD_HASH
+        )
+        if user is None or not user.active or not password_ok:
             raise AuthenticationError("Credenciais inválidas")
         return TokenResponse(access_token=self._codec.encode(user.id, user.role))
 ```
@@ -1616,7 +1623,7 @@ def login(client, email, password=PASSWORD):
 
 
 def test_login_returns_bearer_token(client, make_user):
-    user = make_user(email="admin@oficina.com")
+    make_user(email="admin@oficina.com")
 
     response = login(client, "admin@oficina.com")
 
@@ -1624,7 +1631,6 @@ def test_login_returns_bearer_token(client, make_user):
     body = response.json()
     assert body["token_type"] == "bearer"
     assert body["access_token"]
-    assert user.id is not None
 
 
 def test_login_is_case_insensitive_on_email(client, make_user):
@@ -1685,12 +1691,107 @@ def test_me_with_garbage_token_returns_401(client):
     assert response.status_code == 401
 ```
 
-- [ ] **Step 10: Rodar a suíte inteira**
+- [ ] **Step 10: Teste unitário do AuthService (sem timing side channel) — `backend/tests/test_auth_service.py`**
+
+```python
+import pytest
+
+from app.application.services.auth_service import AuthService
+from app.domain.errors import AuthenticationError
+from app.domain.roles import Role
+from app.domain.user import User
+
+
+class FakeUsers:
+    """Implementa só o que o AuthService usa do Protocol UserRepository."""
+
+    def __init__(self, *users: User) -> None:
+        self._by_email = {u.email: u for u in users}
+
+    def get_by_email(self, email: str) -> User | None:
+        return self._by_email.get(email)
+
+
+class SpyHasher:
+    """Implementa o Protocol PasswordHasher; 'ok:<senha>' é o hash de <senha>."""
+
+    def __init__(self) -> None:
+        self.verify_calls: list[tuple[str, str]] = []
+
+    def hash(self, password: str) -> str:
+        return f"ok:{password}"
+
+    def verify(self, password: str, password_hash: str) -> bool:
+        self.verify_calls.append((password, password_hash))
+        return password_hash == f"ok:{password}"
+
+
+class FakeCodec:
+    def encode(self, user_id: int, role: Role) -> str:
+        return f"token-{user_id}-{role.value}"
+
+
+def make_service(*users: User) -> tuple[AuthService, SpyHasher]:
+    hasher = SpyHasher()
+    return AuthService(FakeUsers(*users), hasher, FakeCodec()), hasher
+
+
+def make_user(active: bool = True) -> User:
+    return User(
+        id=7,
+        name="Ana",
+        email="ana@oficina.com",
+        password_hash="ok:segredo-123",
+        role=Role.ADMIN,
+        active=active,
+    )
+
+
+def test_unknown_email_still_verifies_once_and_fails():
+    service, hasher = make_service()
+
+    with pytest.raises(AuthenticationError):
+        service.login("ninguem@oficina.com", "qualquer")
+
+    assert len(hasher.verify_calls) == 1
+
+
+def test_wrong_password_verifies_once_and_fails():
+    service, hasher = make_service(make_user())
+
+    with pytest.raises(AuthenticationError):
+        service.login("ana@oficina.com", "errada")
+
+    assert len(hasher.verify_calls) == 1
+
+
+def test_inactive_user_with_correct_password_verifies_once_and_fails():
+    service, hasher = make_service(make_user(active=False))
+
+    with pytest.raises(AuthenticationError):
+        service.login("ana@oficina.com", "segredo-123")
+
+    assert len(hasher.verify_calls) == 1
+
+
+def test_active_user_with_correct_password_gets_token():
+    service, hasher = make_service(make_user())
+
+    result = service.login("ANA@oficina.com", "segredo-123")
+
+    assert result.access_token == "token-7-admin"
+    assert len(hasher.verify_calls) == 1
+```
+
+Run: `python -m pytest tests/test_auth_service.py -v`
+Expected: PASS (o verify é chamado exatamente uma vez em todos os cenários).
+
+- [ ] **Step 11: Rodar a suíte inteira**
 
 Run: `python -m pytest -v`
 Expected: PASS em todos os testes (inclui `test_health`, `test_config`, `test_db_models`, `test_security`, `test_error_handlers`, `test_user_repository`, `test_auth_api`).
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 12: Commit**
 
 ```powershell
 git add app tests
