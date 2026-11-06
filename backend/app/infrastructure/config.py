@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     access_token_minutes: int = Field(default=60, ge=1)
     bcrypt_rounds: int = Field(default=12, ge=4, le=15)
     cors_origins: list[str] = ["http://localhost:5173"]
+    # Fotos do check-in: `local` (dev/testes, disco) ou `s3` (produção; credenciais pela role).
+    storage_backend: Literal["local", "s3"] = "local"
+    s3_bucket: str = ""
+    s3_region: str = "sa-east-1"
 
     @field_validator("environment", mode="before")
     @classmethod
@@ -32,6 +36,8 @@ class Settings(BaseSettings):
             raise ValueError("JWT_SECRET forte (>= 32 caracteres) é obrigatório em produção")
         if self.database_url.startswith("sqlite"):
             raise ValueError("DATABASE_URL não pode ser SQLite em produção (use MySQL/RDS)")
+        if self.storage_backend != "s3" or not self.s3_bucket.strip():
+            raise ValueError("Em produção use STORAGE_BACKEND=s3 com S3_BUCKET preenchido")
         return self
 
 
