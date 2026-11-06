@@ -81,3 +81,22 @@
 .ac-toast-in {
   animation: ac-toast-in 200ms ease-out;
 }
+
+/* Entrada orquestrada da tela de login (so na primeira carga; sem animacao se movimento reduzido). */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes ac-draw-down {
+    from { clip-path: inset(0 0 100% 0); }
+    to { clip-path: inset(0); }
+  }
+  @keyframes ac-draw-right {
+    from { clip-path: inset(0 100% 0 0); }
+    to { clip-path: inset(0); }
+  }
+  @keyframes ac-login-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  .ac-draw-down { animation: ac-draw-down 700ms ease-out both; }
+  .ac-draw-right { animation: ac-draw-right 700ms ease-out both; }
+  .ac-login-in { animation: ac-login-in 400ms ease-out 350ms both; }
+}
