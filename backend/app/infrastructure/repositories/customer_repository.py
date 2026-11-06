@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime
 
 from sqlalchemy import Select, func, or_, select
@@ -5,10 +6,16 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domain.customer import Customer
+from app.domain.document import normalize_digits
 from app.domain.errors import ConflictError, NotFoundError
 from app.infrastructure.db.models.customer import CustomerModel
 
 _DUPLICATE = "Já existe um cliente com este CPF/CNPJ"
+_MASKED_NUMBER = re.compile(r"[\d.\-/\s()]*\d[\d.\-/\s()]*")
+
+
+def _escape(term: str) -> str:
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 class SqlCustomerRepository:
@@ -104,13 +111,16 @@ class SqlCustomerRepository:
     ) -> tuple[list[Customer], int]:
         stmt = self._alive()
         if search and search.strip():
-            esc = search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            like = f"%{esc}%"
+            term = search.strip()
+            like = f"%{_escape(term)}%"
+            # Busca mascarada ("529.982.247-25", "(11) 9888") casa com os dígitos armazenados.
+            digits = normalize_digits(term) if _MASKED_NUMBER.fullmatch(term) else term
+            digits_like = f"%{_escape(digits)}%"
             stmt = stmt.where(
                 or_(
                     CustomerModel.name.ilike(like, escape="\\"),
-                    CustomerModel.document.ilike(like, escape="\\"),
-                    CustomerModel.phone.ilike(like, escape="\\"),
+                    CustomerModel.document.ilike(digits_like, escape="\\"),
+                    CustomerModel.phone.ilike(digits_like, escape="\\"),
                     CustomerModel.email.ilike(like, escape="\\"),
                 )
             )

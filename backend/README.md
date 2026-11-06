@@ -41,6 +41,19 @@ ruff check .
 `domain` (entidades, regras, interfaces) → `application` (services, DTOs) →
 `infrastructure` (SQLAlchemy, bcrypt, JWT) / `presentation` (routers FastAPI, DI, erros).
 
+## Endpoints (`/api/v1`)
+
+| Recurso | Rotas | Permissões |
+|---|---|---|
+| Auth | `POST /auth/login`, `GET /auth/me` | público / autenticado |
+| Usuários | `GET,POST /users`, `GET,PATCH,DELETE /users/{id}` | admin |
+| Clientes | `GET /customers` (`page`, `size`, `q` por nome/documento/telefone/e-mail), `POST /customers`, `GET,PATCH,DELETE /customers/{id}` | leitura: qualquer perfil autenticado; escrita: admin e recepção |
+
+Clientes: `document` aceita CPF ou CNPJ (com ou sem máscara, validado pelos dígitos
+verificadores) e é armazenado só com dígitos; único entre não excluídos (409). `phone`
+tem 10–11 dígitos; `email` é salvo em minúsculas. A exclusão é lógica (204) e é bloqueada
+(422) quando o cliente tem veículos.
+
 ## Variáveis de ambiente
 
 Ver `.env.example`. Em produção (`ENVIRONMENT=production`) o `JWT_SECRET` precisa ter
