@@ -487,7 +487,7 @@ __all__ = ["UserModel"]
 - [ ] **Step 8: Rodar e ver passar**
 
 Run: `python -m pytest tests/test_db_models.py -v`
-Expected: PASS (2 passed).
+Expected: PASS (7 passed).
 
 - [ ] **Step 9: Commit**
 
@@ -2446,12 +2446,16 @@ def session_factory(engine):
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
-ARGS = [
+BASE_ARGS = [
     "create-admin",
     "--name", "Admin Geral",
     "--email", "admin@oficina.com",
-    "--password", "senha-forte-9",
 ]
+ARGS = [*BASE_ARGS, "--password", "senha-forte-9"]
+
+
+def _fail_prompt(_: str) -> str:
+    raise AssertionError("o prompt não deveria ser chamado")
 
 
 def test_create_admin_persists_admin_user(session_factory):
@@ -2471,6 +2475,89 @@ def test_create_admin_twice_fails_with_exit_code_1(session_factory, capsys):
 
     assert code == 1
     assert "já cadastrado" in capsys.readouterr().err
+
+
+def test_create_admin_password_from_env_var(session_factory, monkeypatch):
+    monkeypatch.setenv("ADMIN_PASSWORD", "senha-forte-9")
+
+    code = run(
+        BASE_ARGS,
+        session_factory=session_factory,
+        hasher=BcryptHasher(rounds=4),
+        prompt_password=_fail_prompt,
+    )
+
+    with session_factory() as db:
+        user = SqlUserRepository(db).get_by_email("admin@oficina.com")
+    assert code == 0
+    assert user is not None and user.role is Role.ADMIN
+
+
+def test_create_admin_argument_takes_precedence_over_env(session_factory, monkeypatch):
+    monkeypatch.setenv("ADMIN_PASSWORD", "x")  # curta: falharia se fosse usada
+
+    code = run(
+        ARGS,
+        session_factory=session_factory,
+        hasher=BcryptHasher(rounds=4),
+        prompt_password=_fail_prompt,
+    )
+
+    assert code == 0
+
+
+def test_create_admin_prompts_when_no_argument_and_no_env(session_factory, monkeypatch):
+    monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+    prompts: list[str] = []
+
+    def fake_prompt(text: str) -> str:
+        prompts.append(text)
+        return "senha-forte-9"
+
+    code = run(
+        BASE_ARGS,
+        session_factory=session_factory,
+        hasher=BcryptHasher(rounds=4),
+        prompt_password=fake_prompt,
+    )
+
+    with session_factory() as db:
+        user = SqlUserRepository(db).get_by_email("admin@oficina.com")
+    assert code == 0
+    assert prompts == ["Senha: "]
+    assert user is not None
+
+
+def test_create_admin_empty_env_falls_back_to_prompt(session_factory, monkeypatch):
+    monkeypatch.setenv("ADMIN_PASSWORD", "")
+
+    code = run(
+        BASE_ARGS,
+        session_factory=session_factory,
+        hasher=BcryptHasher(rounds=4),
+        prompt_password=lambda _: "senha-forte-9",
+    )
+
+    assert code == 0
+
+
+def test_create_admin_short_password_fails_without_echoing_it(
+    session_factory, monkeypatch, capsys
+):
+    monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+
+    code = run(
+        BASE_ARGS,
+        session_factory=session_factory,
+        hasher=BcryptHasher(rounds=4),
+        prompt_password=lambda _: "curta",
+    )
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.err.startswith("Erro:")
+    assert "curta" not in captured.err
+    assert "curta" not in captured.out
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -2482,6 +2569,8 @@ Expected: FAIL com `ImportError: cannot import name 'run' from 'app.cli'` (módu
 
 ```python
 import argparse
+import getpass
+import os
 import sys
 from collections.abc import Callable, Sequence
 
@@ -2499,31 +2588,44 @@ from app.infrastructure.repositories.user_repository import SqlUserRepository
 from app.infrastructure.security import BcryptHasher
 
 
+def _validation_message(exc: ValidationError) -> str:
+    # Nunca usar str(exc): inclui input_value e vazaria a senha digitada.
+    return "; ".join(
+        f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}" for err in exc.errors()
+    )
+
+
 def run(
     argv: Sequence[str] | None = None,
     *,
     session_factory: Callable[[], Session] = SessionLocal,
     hasher: PasswordHasher | None = None,
+    prompt_password: Callable[[str], str] = getpass.getpass,
 ) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
     create = sub.add_parser("create-admin", help="Cria um usuário administrador")
     create.add_argument("--name", required=True)
     create.add_argument("--email", required=True)
-    create.add_argument("--password", required=True)
+    create.add_argument(
+        "--password",
+        help="Opcional (evite: vaza no histórico do shell). "
+        "Alternativas: variável ADMIN_PASSWORD ou prompt interativo.",
+    )
     args = parser.parse_args(argv)
+
+    # Precedência: --password > ADMIN_PASSWORD > prompt
+    password = args.password or os.environ.get("ADMIN_PASSWORD") or prompt_password("Senha: ")
 
     hasher = hasher or BcryptHasher(rounds=get_settings().bcrypt_rounds)
     try:
         with session_factory() as db:
             service = UserService(SqlUserRepository(db), hasher)
             created = service.create(
-                UserCreate(
-                    name=args.name, email=args.email, password=args.password, role=Role.ADMIN
-                )
+                UserCreate(name=args.name, email=args.email, password=password, role=Role.ADMIN)
             )
     except (AppError, ValidationError) as exc:
-        message = exc.message if isinstance(exc, AppError) else str(exc)
+        message = exc.message if isinstance(exc, AppError) else _validation_message(exc)
         print(f"Erro: {message}", file=sys.stderr)
         return 1
 
@@ -2538,7 +2640,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `python -m pytest tests/test_cli.py -v`
-Expected: PASS (2 passed).
+Expected: PASS (7 passed).
 
 - [ ] **Step 5: Commit**
 
@@ -2569,7 +2671,9 @@ Expected: todos os testes passando, 0 falhas.
 ```powershell
 Copy-Item .env.example .env
 alembic upgrade head
-python -m app.cli create-admin --name "Admin" --email admin@oficina.com --password "senha-forte-9"
+$env:ADMIN_PASSWORD = "senha-forte-9"   # ou omita para receber o prompt "Senha: "
+python -m app.cli create-admin --name "Admin" --email admin@oficina.com
+Remove-Item Env:ADMIN_PASSWORD
 uvicorn app.main:app --port 8000
 ```
 Expected: migration `0001` aplicada, `Administrador criado: admin@oficina.com (id 1)`, servidor sobe em `http://127.0.0.1:8000`.
@@ -2624,7 +2728,8 @@ python -m venv .venv
 pip install -r requirements-dev.txt
 Copy-Item .env.example .env
 alembic upgrade head
-python -m app.cli create-admin --name "Admin" --email admin@oficina.com --password "senha-forte-9"
+# A senha vem de $env:ADMIN_PASSWORD ou, se ausente, de um prompt "Senha: " (evite --password: vaza no histórico)
+python -m app.cli create-admin --name "Admin" --email admin@oficina.com
 uvicorn app.main:app --reload
 ```
 
