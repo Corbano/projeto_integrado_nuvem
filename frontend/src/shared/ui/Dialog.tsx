@@ -15,6 +15,11 @@ export interface DialogProps {
    * O fechamento fica por conta dos botoes do dialogo.
    */
   dismissible?: boolean
+  /**
+   * `center` (padrão): janela centralizada. `sheet`: folha presa à borda inferior, largura total,
+   * cantos de cima arredondados (celular). Quem usa decide quando (ex.: useMediaQuery).
+   */
+  variant?: 'center' | 'sheet'
   className?: string
 }
 
@@ -80,8 +85,10 @@ function OpenDialog({
   children,
   footer,
   dismissible = true,
+  variant = 'center',
   className,
 }: DialogProps) {
+  const sheet = variant === 'sheet'
   const titleId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -177,7 +184,10 @@ function OpenDialog({
   return createPortal(
     <div
       ref={overlayRef}
-      className="ac-fade-in fixed inset-0 z-50 flex items-center justify-center bg-navy/45 p-4 backdrop-blur-[2px]"
+      className={cn(
+        'ac-fade-in fixed inset-0 z-50 flex justify-center bg-navy/45 backdrop-blur-[2px]',
+        sheet ? 'items-end p-0' : 'items-center p-4',
+      )}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && dismissible && stack[stack.length - 1] === token) onClose()
       }}
@@ -188,11 +198,16 @@ function OpenDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
+        data-variant={variant}
         className={cn(
-          'ac-dialog-in max-h-full w-full max-w-lg overflow-y-auto rounded-dialogo border border-linha bg-superficie p-6 text-tinta shadow-dialogo outline-none sm:p-7',
+          'max-h-full w-full overflow-y-auto border border-linha bg-superficie text-tinta shadow-dialogo outline-none',
+          sheet
+            ? 'ac-sheet-in max-h-[92dvh] rounded-t-dialogo border-b-0 px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]'
+            : 'ac-dialog-in max-w-lg rounded-dialogo p-6 sm:p-7',
           className,
         )}
       >
+        {sheet && <span aria-hidden="true" className="mx-auto mb-3 block h-1.5 w-10 rounded-pilula bg-linha" />}
         <h2 id={titleId} className="text-secao font-bold text-navy">
           {title}
         </h2>

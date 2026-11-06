@@ -655,3 +655,37 @@ describe('EmptyState, Skeleton, Logo', () => {
     expect(screen.getByText('Auto Center')).toHaveClass('sr-only')
   })
 })
+
+describe('Dialog variant="sheet"', () => {
+  it('encosta na borda inferior, com alça e cantos de cima arredondados, mantendo o comportamento de dialog', async () => {
+    function SheetHarness() {
+      const [open, setOpen] = useState(false)
+      return (
+        <>
+          <button onClick={() => setOpen(true)}>Abrir folha</button>
+          <Dialog open={open} onClose={() => setOpen(false)} title="Editar usuário" variant="sheet">
+            <input aria-label="Nome" />
+          </Dialog>
+        </>
+      )
+    }
+    render(<SheetHarness />)
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir folha' }))
+    const dialog = screen.getByRole('dialog', { name: 'Editar usuário' })
+    expect(dialog).toHaveAttribute('data-variant', 'sheet')
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveClass('rounded-t-dialogo')
+    expect(dialog.parentElement).toHaveClass('items-end')
+    expect(screen.getByLabelText('Nome')).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('o padrão continua centralizado', async () => {
+    render(<DialogHarness />)
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir' }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveAttribute('data-variant', 'center')
+    expect(dialog.parentElement).toHaveClass('items-center')
+  })
+})

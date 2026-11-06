@@ -92,6 +92,21 @@
   animation: ac-dialog-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+@keyframes ac-sheet-in {
+  from {
+    transform: translateY(32px);
+    opacity: 0.6;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.ac-sheet-in {
+  animation: ac-sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 .ac-fade-in {
   animation: ac-fade-in 160ms ease-out;
 }

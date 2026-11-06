@@ -11,6 +11,8 @@ export interface RowAction {
   /** Ação destrutiva: texto em vermelho. */
   danger?: boolean
   disabled?: boolean
+  /** Explicação curta mostrada sob o rótulo (ex.: por que está desabilitada). Não entra no nome acessível. */
+  hint?: string
 }
 
 export interface RowActionsProps {
@@ -165,17 +167,29 @@ export function RowActions({ label, actions, className }: RowActionsProps) {
                 role="menuitem"
                 tabIndex={index === focusIndex ? 0 : -1}
                 aria-disabled={action.disabled || undefined}
+                aria-label={action.hint ? action.label : undefined}
+                aria-describedby={action.hint ? `${menuId}-hint-${index}` : undefined}
                 onClick={() => select(action)}
                 onMouseEnter={() => !action.disabled && setFocusIndex(index)}
                 className={cn(
-                  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-corpo font-medium outline-none',
+                  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-corpo font-medium outline-none',
                   'focus-visible:bg-fundo [&_svg]:size-4 [&_svg]:shrink-0',
                   action.danger ? 'text-critico-texto focus:bg-critico-fundo' : 'text-tinta focus:bg-fundo',
                   action.disabled && 'cursor-not-allowed opacity-50',
                 )}
               >
                 {action.icon && <span aria-hidden="true" className="flex">{action.icon}</span>}
-                {action.label}
+                <span className="flex min-w-0 flex-col">
+                  {action.label}
+                  {action.hint && (
+                    <span
+                      id={`${menuId}-hint-${index}`}
+                      className="max-w-48 text-legenda font-normal whitespace-normal text-tinta-suave"
+                    >
+                      {action.hint}
+                    </span>
+                  )}
+                </span>
               </button>
             ))}
           </div>,
