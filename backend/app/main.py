@@ -14,11 +14,18 @@ def create_app() -> FastAPI:
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
 
-    app = FastAPI(title=settings.app_name, version="0.1.0")
+    docs_off = settings.environment == "production"
+    app = FastAPI(
+        title=settings.app_name,
+        version="0.1.0",
+        docs_url=None if docs_off else "/docs",
+        redoc_url=None if docs_off else "/redoc",
+        openapi_url=None if docs_off else "/openapi.json",
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )

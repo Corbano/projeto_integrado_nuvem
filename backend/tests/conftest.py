@@ -4,6 +4,7 @@ import os
 # Deve rodar antes de qualquer import de `app` (as Settings são cacheadas).
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["BCRYPT_ROUNDS"] = "4"
+os.environ["JWT_SECRET"] = "t" * 40
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
