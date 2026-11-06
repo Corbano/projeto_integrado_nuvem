@@ -56,7 +56,8 @@ describe('Início', () => {
     renderAt('/')
     expect(await cards()).toHaveLength(8)
     for (const title of TITLES) {
-      expect(screen.getByRole('heading', { level: 3, name: title })).toBeInTheDocument()
+      const card = screen.getAllByRole('heading', { level: 3, name: title }).find((h) => h.closest('article'))
+      expect(card).toBeDefined()
     }
     const nav = screen.getByRole('navigation', { name: 'Principal' })
     expect(within(nav).getByRole('link', { name: 'Usuários' })).toHaveAttribute('href', '/usuarios')
@@ -65,10 +66,26 @@ describe('Início', () => {
     expect(screen.getByRole('link', { name: 'Abrir Usuários' })).toHaveAttribute('href', '/usuarios')
   })
 
+  it('mostra a visão geral com dados de exemplo, cada card com a etiqueta', async () => {
+    renderAt('/')
+    await cards()
+    const overview = screen.getByRole('region', { name: 'Visão geral da oficina' })
+    const sections = within(overview).getAllByRole('region')
+    // 4 KPIs + gráfico, 3 anéis, serviços, veículo, agenda, alertas, mecânicos
+    expect(sections).toHaveLength(13)
+    for (const section of sections) {
+      expect(within((section.closest('li') as HTMLElement | null) ?? section).getAllByText('Dados de exemplo').length).toBeGreaterThan(0)
+    }
+    expect(within(overview).getByRole('heading', { level: 3, name: 'Alertas de manutenção' })).toBeInTheDocument()
+    expect(within(overview).getByRole('heading', { level: 3, name: 'Serviços em andamento' })).toBeInTheDocument()
+    expect(within(overview).getByRole('heading', { level: 3, name: 'Agenda de hoje' })).toBeInTheDocument()
+    expect(await cards()).toHaveLength(8)
+  })
+
   it('recepção vê só o permitido, sem Usuários', async () => {
     renderAt('/', 'token-recepcao')
     await cards()
-    const titles = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+    const titles = (await cards()).map((card) => within(card).getByRole('heading', { level: 3 }).textContent)
     expect(titles).toEqual(['Clientes', 'Veículos', 'Check-in', 'Ordens de serviço', 'Estoque', 'Alertas de manutenção'])
     const nav = screen.getByRole('navigation', { name: 'Principal' })
     expect(within(nav).queryByText('Usuários')).not.toBeInTheDocument()

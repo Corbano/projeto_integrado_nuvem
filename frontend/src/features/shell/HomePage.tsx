@@ -1,7 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PageHeader, StatusPill } from '../../shared/ui'
 import { useDocumentTitle } from '../../shared/hooks/useDocumentTitle'
 import { useAuth } from '../auth/useAuth'
+import {
+  ActiveMechanics,
+  BudgetDonuts,
+  JobCards,
+  KpiRow,
+  MaintenanceAlerts,
+  RevenueChart,
+  TodayAgenda,
+  VehicleTimeline,
+} from '../dashboard'
+import {
+  buildAgendaDays,
+  buildRevenueSeries,
+  demoAlerts,
+  demoAppointments,
+  demoBudgets,
+  demoHistory,
+  demoJobs,
+  demoKpis,
+  demoMechanics,
+  demoVehicle,
+} from '../dashboard/demo-data'
 import { greetingFor } from './greeting'
 import { ModuleCard } from './ModuleCard'
 import { modulesForRole } from './modules'
@@ -29,6 +51,8 @@ export function HomePage() {
   const now = useNow()
   const status = useApiStatus()
   const modules = modulesForRole(user?.role)
+  const revenue = useMemo(() => buildRevenueSeries(now), [now])
+  const agendaDays = useMemo(() => buildAgendaDays(now), [now])
   const firstName = user?.name.trim().split(/\s+/)[0] ?? ''
 
   return (
@@ -55,6 +79,28 @@ export function HomePage() {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section aria-labelledby="visao-geral" className="mt-12">
+        <h2 id="visao-geral" className="mb-5 text-secao font-bold text-navy">
+          Visão geral da oficina
+        </h2>
+        <div className="@container flex flex-col gap-6">
+          <KpiRow items={demoKpis} />
+          <div className="grid grid-cols-1 items-start gap-6 @min-[1040px]:grid-cols-[minmax(0,1fr)_24rem]">
+            <div className="flex min-w-0 flex-col gap-6">
+              <RevenueChart series={revenue} />
+              <BudgetDonuts items={demoBudgets} />
+              <JobCards items={demoJobs} />
+              <VehicleTimeline vehicle={demoVehicle} history={demoHistory} />
+            </div>
+            <div className="flex min-w-0 flex-col gap-6">
+              <TodayAgenda days={agendaDays} items={demoAppointments} />
+              <MaintenanceAlerts items={demoAlerts} />
+              <ActiveMechanics items={demoMechanics} />
+            </div>
+          </div>
         </div>
       </section>
     </>
