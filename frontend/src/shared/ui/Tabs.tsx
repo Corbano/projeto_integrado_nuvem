@@ -60,7 +60,7 @@ export function Tabs({ items, value, onValueChange, label, children, className, 
         role="tablist"
         aria-label={label}
         onKeyDown={onKeyDown}
-        className="flex gap-1 overflow-x-auto border-b border-linha"
+        className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-linha"
       >
         {items.map((item, index) => {
           const selected = index === activeIndex
