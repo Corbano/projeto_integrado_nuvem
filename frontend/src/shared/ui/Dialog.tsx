@@ -177,7 +177,7 @@ function OpenDialog({
   return createPortal(
     <div
       ref={overlayRef}
-      className="ac-fade-in fixed inset-0 z-50 flex items-center justify-center bg-chassi/60 p-4"
+      className="ac-fade-in fixed inset-0 z-50 flex items-center justify-center bg-navy/45 p-4 backdrop-blur-[2px]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && dismissible && stack[stack.length - 1] === token) onClose()
       }}
@@ -189,15 +189,15 @@ function OpenDialog({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'ac-dialog-in max-h-full w-full max-w-lg overflow-y-auto rounded-dialogo border border-risco bg-bancada p-6 text-chassi shadow-xl',
+          'ac-dialog-in max-h-full w-full max-w-lg overflow-y-auto rounded-dialogo border border-linha bg-superficie p-6 text-tinta shadow-dialogo outline-none sm:p-7',
           className,
         )}
       >
-        <h2 id={titleId} className="font-display text-secao font-semibold">
+        <h2 id={titleId} className="text-secao font-bold text-navy">
           {title}
         </h2>
-        {children && <div className="mt-3 text-corpo">{children}</div>}
-        {footer && <div className="mt-6 flex flex-wrap justify-end gap-3">{footer}</div>}
+        {children && <div className="mt-3 text-corpo text-tinta-suave">{children}</div>}
+        {footer && <div className="mt-7 flex flex-wrap justify-end gap-3">{footer}</div>}
       </div>
     </div>,
     document.body,

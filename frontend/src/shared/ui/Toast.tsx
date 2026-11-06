@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { CircleCheck, CircleX, Info, X } from 'lucide-react'
 import { cn } from './cn'
 import { ToastContext } from './toastContext'
 import type { ToastApi, ToastKind } from './toastContext'
@@ -13,10 +14,10 @@ interface ToastItem {
   message: string
 }
 
-const kindClasses: Record<ToastKind, string> = {
-  success: 'border-l-sinal',
-  info: 'border-l-esmalte',
-  error: 'border-l-freio',
+const kinds: Record<ToastKind, { Icon: typeof CircleCheck; badge: string }> = {
+  success: { Icon: CircleCheck, badge: 'bg-ok-fundo text-ok-texto' },
+  info: { Icon: Info, badge: 'bg-info-fundo text-azul' },
+  error: { Icon: CircleX, badge: 'bg-critico-fundo text-critico-texto' },
 }
 
 function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: number) => void }) {
@@ -24,6 +25,7 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
   const startedAt = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const { id } = toast
+  const kind = kinds[toast.kind]
 
   const start = useCallback(() => {
     startedAt.current = Date.now()
@@ -52,21 +54,22 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
       onMouseLeave={resume}
       onFocus={pause}
       onBlur={resume}
-      className={cn(
-        'ac-toast-in flex items-start gap-3 rounded-campo border border-risco border-l-4 bg-bancada p-3 text-corpo text-chassi shadow-lg',
-        kindClasses[toast.kind],
-      )}
+      className="ac-toast-in flex items-start gap-3 rounded-card border border-linha bg-superficie p-3 pl-3.5 text-corpo text-tinta shadow-dialogo"
     >
-      <p className="min-w-0 flex-1 py-2">{toast.message}</p>
+      <span
+        aria-hidden="true"
+        className={cn('mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full', kind.badge)}
+      >
+        <kind.Icon size={20} strokeWidth={1.75} />
+      </span>
+      <p className="min-w-0 flex-1 py-2 font-medium">{toast.message}</p>
       <button
         type="button"
         onClick={() => onDismiss(id)}
         aria-label="Fechar aviso"
-        className="inline-flex size-11 shrink-0 items-center justify-center rounded-campo text-chassi-suave hover:bg-risco/50 hover:text-chassi"
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-controle text-tinta-suave transition-colors hover:bg-fundo hover:text-tinta"
       >
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M6 6l12 12M18 6L6 18" />
-        </svg>
+        <X aria-hidden="true" size={18} strokeWidth={1.75} />
       </button>
     </div>
   )

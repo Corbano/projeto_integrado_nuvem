@@ -10,7 +10,7 @@ export function Skeleton({ className }: SkeletonProps) {
     <div
       aria-hidden="true"
       data-testid="skeleton"
-      className={cn('animate-pulse rounded-campo bg-risco/70', 'h-4 w-full', className)}
+      className={cn('animate-pulse rounded-controle bg-linha', 'h-4 w-full', className)}
     />
   )
 }

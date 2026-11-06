@@ -8,9 +8,9 @@ export interface PlateProps {
 }
 
 const sizes = {
-  sm: { body: 'text-destaque px-2 py-0.5', band: 'text-[8px] leading-3 px-2' },
-  md: { body: 'text-secao px-3 py-1', band: 'text-[9px] leading-3 px-3' },
-  lg: { body: 'text-titulo px-4 py-1.5', band: 'text-[11px] leading-4 px-4' },
+  sm: { body: 'text-[17px] leading-5 px-2 pt-px pb-0.5', band: 'text-[7px] leading-[10px] px-2' },
+  md: { body: 'text-secao leading-7 px-3 pb-0.5', band: 'text-[8px] leading-3 px-3' },
+  lg: { body: 'text-titulo leading-9 px-4 pb-1', band: 'text-[10px] leading-4 px-4' },
 }
 
 /**
@@ -30,8 +30,9 @@ export function Plate({ value, size = 'md', className }: PlateProps) {
         aria-label={shown ? `Placa inválida: ${shown}` : 'Sem placa'}
         data-valid="false"
         className={cn(
-          'inline-flex items-center rounded-placa border border-borda-campo bg-concreto font-display font-semibold tracking-wider text-chassi-suave',
+          'inline-flex items-center rounded-placa border border-dashed border-borda-campo bg-fundo font-display font-bold tracking-wider text-tinta-suave',
           s.body,
+          'py-0.5',
           className,
         )}
       >
@@ -46,23 +47,17 @@ export function Plate({ value, size = 'md', className }: PlateProps) {
       aria-label={`Placa ${text}`}
       data-valid="true"
       className={cn(
-        'inline-flex flex-col overflow-hidden rounded-placa border-2 border-chassi bg-white text-chassi',
+        'inline-flex flex-col overflow-hidden rounded-placa border-[1.5px] border-tinta bg-white text-tinta shadow-[0_1px_2px_rgba(16,25,74,0.08)]',
         className,
       )}
     >
       <span
         aria-hidden="true"
-        className={cn(
-          'bg-esmalte text-center font-sans font-semibold tracking-[0.2em] text-white',
-          s.band,
-        )}
+        className={cn('bg-azul text-center font-sans font-semibold tracking-[0.24em] text-white', s.band)}
       >
         BRASIL
       </span>
-      <span
-        aria-hidden="true"
-        className={cn('text-center font-display font-bold tracking-wider', s.body)}
-      >
+      <span aria-hidden="true" className={cn('text-center font-display font-bold tracking-[0.06em]', s.body)}>
         {text}
       </span>
     </span>

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   Badge,
-  BayLine,
   Button,
   ConfirmDialog,
   Dialog,
@@ -14,10 +13,14 @@ import {
   Logo,
   Pagination,
   Plate,
+  RowActions,
   Skeleton,
+  StatusPill,
   Table,
   Td,
+  TdCheckbox,
   Th,
+  ThCheckbox,
   ToastProvider,
   Tr,
   isValidPlate,
@@ -120,10 +123,51 @@ describe('Field', () => {
   })
 })
 
-describe('Badge', () => {
+describe('StatusPill (Badge)', () => {
   it.each(['ok', 'attention', 'critical', 'neutral', 'info'] as const)('renderiza %s', (variant) => {
     render(<Badge variant={variant}>Texto</Badge>)
     expect(screen.getByText('Texto')).toHaveAttribute('data-variant', variant)
+  })
+
+  it('Badge é alias de StatusPill e o ponto é decorativo', () => {
+    expect(Badge).toBe(StatusPill)
+    const { container } = render(<StatusPill variant="ok">Ativo</StatusPill>)
+    expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull()
+    render(<StatusPill dot={false}>Sem ponto</StatusPill>)
+    expect(screen.getByText('Sem ponto').querySelector('[aria-hidden="true"]')).toBeNull()
+  })
+})
+
+describe('Button: variantes e tamanhos', () => {
+  it.each(['primary', 'accent', 'dark', 'outline', 'secondary', 'danger', 'ghost'] as const)(
+    'renderiza %s',
+    (variant) => {
+      render(<Button variant={variant}>{variant}</Button>)
+      expect(screen.getByRole('button', { name: variant })).toBeEnabled()
+    },
+  )
+
+  it('loading mostra spinner decorativo e texto "Carregando" para leitores de tela', () => {
+    render(
+      <Button loading size="lg">
+        Salvar
+      </Button>,
+    )
+    expect(screen.getByRole('button', { name: /Salvar/ })).toHaveTextContent('SalvarCarregando')
+  })
+})
+
+describe('Input com ícone', () => {
+  it('mantém a ligação com o Field e o ícone é decorativo', () => {
+    render(
+      <Field label="E-mail" error="Obrigatório">
+        <Input leadingIcon={<svg data-testid="ico" />} />
+      </Field>,
+    )
+    const input = screen.getByLabelText('E-mail')
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toHaveClass('pl-10')
+    expect(screen.getByTestId('ico').parentElement).toHaveAttribute('aria-hidden', 'true')
   })
 })
 
@@ -439,6 +483,103 @@ describe('Table', () => {
     expect(screen.getByRole('cell', { name: /Ana/ }).closest('tr')).toHaveAttribute('data-status', 'inactive')
     expect(screen.getByText('Inativo')).toHaveClass('sr-only')
   })
+
+  it('coluna ordenável expõe aria-sort e chama onSort', async () => {
+    const onSort = vi.fn()
+    render(
+      <Table>
+        <thead>
+          <tr>
+            <Th sort="asc" onSort={onSort}>
+              Nome
+            </Th>
+            <Th>E-mail</Th>
+          </tr>
+        </thead>
+      </Table>,
+    )
+    const header = screen.getByRole('columnheader', { name: 'Nome' })
+    expect(header).toHaveAttribute('aria-sort', 'ascending')
+    expect(screen.getByRole('columnheader', { name: 'E-mail' })).not.toHaveAttribute('aria-sort')
+    await userEvent.click(screen.getByRole('button', { name: 'Nome' }))
+    expect(onSort).toHaveBeenCalledTimes(1)
+  })
+
+  it('checkbox de cabeçalho suporta estado misto', () => {
+    render(
+      <Table>
+        <thead>
+          <tr>
+            <ThCheckbox indeterminate checked={false} onChange={() => {}} />
+          </tr>
+        </thead>
+        <tbody>
+          <Tr selected>
+            <TdCheckbox aria-label="Selecionar Ana" checked onChange={() => {}} />
+          </Tr>
+        </tbody>
+      </Table>,
+    )
+    const all = screen.getByRole('checkbox', { name: 'Selecionar todas as linhas' }) as HTMLInputElement
+    expect(all.indeterminate).toBe(true)
+    expect(screen.getByRole('checkbox', { name: 'Selecionar Ana' })).toBeChecked()
+  })
+})
+
+describe('RowActions', () => {
+  function setup() {
+    const editar = vi.fn()
+    const excluir = vi.fn()
+    render(
+      <RowActions
+        label="Ana Souza"
+        actions={[
+          { label: 'Editar', onSelect: editar },
+          { label: 'Desativar', onSelect: () => {}, disabled: true },
+          { label: 'Excluir', onSelect: excluir, danger: true },
+        ]}
+      />,
+    )
+    return { editar, excluir, trigger: screen.getByRole('button', { name: 'Ações de Ana Souza' }) }
+  }
+
+  it('abre pelo clique com o foco no primeiro item e fecha com Esc devolvendo o foco', async () => {
+    const { trigger } = setup()
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(trigger)
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('menu', { name: 'Ações de Ana Souza' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Editar' })).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+
+  it('setas pulam itens desabilitados, dão a volta e Enter escolhe', async () => {
+    const { excluir, trigger } = setup()
+    trigger.focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('menuitem', { name: 'Editar' })).toHaveFocus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('menuitem', { name: 'Excluir' })).toHaveFocus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('menuitem', { name: 'Editar' })).toHaveFocus()
+    await userEvent.keyboard('{End}{Enter}')
+    expect(excluir).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+
+  it('↑ no botão abre no último item; clique fora fecha', async () => {
+    const { trigger } = setup()
+    trigger.focus()
+    await userEvent.keyboard('{ArrowUp}')
+    expect(screen.getByRole('menuitem', { name: 'Excluir' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Desativar' })).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.click(document.body)
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
 })
 
 describe('Pagination', () => {
@@ -454,11 +595,39 @@ describe('Pagination', () => {
   it('desabilita próxima na última página', () => {
     render(<Pagination page={7} totalPages={7} onPageChange={() => {}} />)
     expect(screen.getByRole('button', { name: 'Próxima página' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Última página' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Página anterior' })).toBeEnabled()
+  })
+
+  it('primeira/última página e "Linhas por página"', async () => {
+    const onPageChange = vi.fn()
+    const onPageSizeChange = vi.fn()
+    render(
+      <Pagination
+        page={3}
+        totalPages={7}
+        onPageChange={onPageChange}
+        pageSize={10}
+        onPageSizeChange={onPageSizeChange}
+        summary="Mostrando 21–30 de 63"
+      />,
+    )
+    expect(screen.getByText('Mostrando 21–30 de 63')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Primeira página' }))
+    expect(onPageChange).toHaveBeenLastCalledWith(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Última página' }))
+    expect(onPageChange).toHaveBeenLastCalledWith(7)
+    await userEvent.selectOptions(screen.getByLabelText('Linhas por página'), '20')
+    expect(onPageSizeChange).toHaveBeenCalledWith(20)
+  })
+
+  it('sem onPageSizeChange não mostra o seletor', () => {
+    render(<Pagination page={1} totalPages={1} onPageChange={() => {}} />)
+    expect(screen.queryByLabelText('Linhas por página')).not.toBeInTheDocument()
   })
 })
 
-describe('EmptyState, Skeleton, Logo, BayLine', () => {
+describe('EmptyState, Skeleton, Logo', () => {
   it('dispara a ação do estado vazio', async () => {
     const onClick = vi.fn()
     render(
@@ -473,19 +642,16 @@ describe('EmptyState, Skeleton, Logo, BayLine', () => {
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
-  it('Skeleton e BayLine são decorativos', () => {
-    const { container } = render(
-      <>
-        <Skeleton />
-        <BayLine orientation="vertical" />
-      </>,
-    )
-    expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(2)
-    expect(container.querySelector('[data-orientation="vertical"]')).not.toBeNull()
+  it('Skeleton é decorativo', () => {
+    const { container } = render(<Skeleton />)
+    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('Logo mostra o nome', () => {
-    render(<Logo />)
+  it('Logo mostra o nome, inclusive só com o símbolo', () => {
+    const { unmount } = render(<Logo />)
     expect(screen.getByText('Auto Center')).toBeInTheDocument()
+    unmount()
+    render(<Logo markOnly tone="onDark" />)
+    expect(screen.getByText('Auto Center')).toHaveClass('sr-only')
   })
 })

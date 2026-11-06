@@ -1,38 +1,39 @@
 import type { ButtonHTMLAttributes } from 'react'
+import { LoaderCircle } from 'lucide-react'
 import { cn } from './cn'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
+export type ButtonVariant = 'primary' | 'accent' | 'dark' | 'outline' | 'secondary' | 'danger' | 'ghost'
+export type ButtonSize = 'sm' | 'md' | 'lg'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
+  size?: ButtonSize
   loading?: boolean
 }
 
+const outline =
+  'bg-superficie text-tinta border border-linha shadow-[0_1px_2px_rgba(16,25,74,0.05)] hover:border-borda-campo hover:bg-fundo'
+
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-esmalte text-bancada border border-esmalte hover:bg-chassi hover:border-chassi',
-  secondary: 'bg-bancada text-chassi border border-borda-campo hover:border-chassi',
-  danger: 'bg-freio-texto text-bancada border border-freio-texto hover:bg-chassi hover:border-chassi',
-  ghost: 'bg-transparent text-esmalte border border-transparent hover:bg-risco/50',
+  primary: 'bg-azul text-white border border-azul hover:bg-azul-escuro hover:border-azul-escuro',
+  accent: 'bg-menta text-navy border border-menta hover:bg-[#10B592] hover:border-[#10B592]',
+  dark: 'bg-navy text-white border border-navy hover:bg-navy-2 hover:border-navy-2',
+  outline,
+  /** Alias de `outline`, mantido por compatibilidade. */
+  secondary: outline,
+  danger: 'bg-critico-texto text-white border border-critico-texto hover:bg-[#962024] hover:border-[#962024]',
+  ghost: 'bg-transparent text-azul border border-transparent hover:bg-info-fundo',
 }
 
-function Spinner() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="size-4 animate-spin"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-    >
-      <circle cx="12" cy="12" r="9" opacity="0.3" />
-      <path d="M21 12a9 9 0 0 0-9-9" strokeLinecap="round" />
-    </svg>
-  )
+const sizes: Record<ButtonSize, string> = {
+  sm: 'min-h-9 px-3 text-mini gap-1.5 [&_svg]:size-4',
+  md: 'min-h-11 px-4 text-corpo gap-2 [&_svg]:size-[18px]',
+  lg: 'min-h-12 px-5 text-destaque gap-2 [&_svg]:size-5',
 }
 
 export function Button({
   variant = 'primary',
+  size = 'md',
   loading = false,
   disabled,
   onClick,
@@ -56,13 +57,15 @@ export function Button({
       }}
       aria-busy={loading || undefined}
       className={cn(
-        'inline-flex min-h-11 items-center justify-center gap-2 rounded-campo px-4 font-sans text-corpo font-semibold',
-        'transition-colors disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-progress aria-disabled:opacity-80',
+        'inline-flex items-center justify-center rounded-controle font-sans font-semibold whitespace-nowrap select-none',
+        'transition-[background-color,border-color,color,box-shadow] duration-150 [&_svg]:shrink-0',
+        'disabled:cursor-not-allowed disabled:opacity-55 aria-disabled:cursor-progress aria-disabled:opacity-85',
+        sizes[size],
         variants[variant],
         className,
       )}
     >
-      {loading && <Spinner />}
+      {loading && <LoaderCircle aria-hidden="true" strokeWidth={2} className="animate-spin" />}
       {children}
       {loading && <span className="sr-only">Carregando</span>}
     </button>

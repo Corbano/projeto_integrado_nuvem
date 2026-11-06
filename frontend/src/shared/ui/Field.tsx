@@ -43,22 +43,22 @@ export function Field({ label, hint, error, required, children, className }: Fie
 
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1 block text-corpo font-medium text-chassi">
+      <label htmlFor={id} className="mb-1.5 block text-mini font-semibold text-tinta">
         {label}
         {required && (
-          <span aria-hidden="true" className="ml-0.5 text-freio-texto">
+          <span aria-hidden="true" className="ml-0.5 text-critico-texto">
             *
           </span>
         )}
       </label>
       {control}
       {hint && (
-        <p id={hintId} className="mt-1 text-mini text-chassi-suave">
+        <p id={hintId} className="mt-1.5 text-mini text-tinta-suave">
           {hint}
         </p>
       )}
       {error && (
-        <p id={errorId} className="mt-1 text-mini font-medium text-freio-texto">
+        <p id={errorId} className="mt-1.5 text-mini font-medium text-critico-texto">
           {error}
         </p>
       )}
