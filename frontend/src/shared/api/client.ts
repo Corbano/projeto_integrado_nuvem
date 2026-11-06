@@ -5,6 +5,15 @@ export const API_URL: string = (
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://127.0.0.1:8000/api/v1'
 ).replace(/\/+$/, '')
 
+/** Origem do servidor da API (sem o prefixo /api/v1): onde mora o /health. */
+export const API_ORIGIN: string = (() => {
+  try {
+    return new URL(API_URL).origin
+  } catch {
+    return ''
+  }
+})()
+
 type UnauthorizedHandler = () => void
 let unauthorizedHandler: UnauthorizedHandler | null = null
 

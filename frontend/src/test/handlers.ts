@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { API_URL } from '../shared/api/client'
+import { API_ORIGIN, API_URL } from '../shared/api/client'
 import type { User } from '../shared/api/types'
 
 export const ADMIN: User = { id: 1, name: 'Ana Admin', email: 'admin@teste.local', role: 'admin', active: true }
@@ -10,15 +10,23 @@ export const MECHANIC: User = {
   role: 'mechanic',
   active: true,
 }
+export const RECEPTION: User = {
+  id: 3,
+  name: 'Rita Recepção',
+  email: 'recepcao@teste.local',
+  role: 'reception',
+  active: true,
+}
 export const TEST_PASSWORD = 'senha-de-teste-123'
 
-const usersByToken: Record<string, User> = { 'token-admin': ADMIN, 'token-mecanico': MECHANIC }
+const usersByToken: Record<string, User> = { 'token-admin': ADMIN, 'token-mecanico': MECHANIC, 'token-recepcao': RECEPTION }
 
 export function errorBody(code: string, message: string) {
   return { error: { code, message } }
 }
 
 export const handlers = [
+  http.get(`${API_ORIGIN}/health`, () => HttpResponse.json({ status: 'ok' })),
   http.post(`${API_URL}/auth/login`, async ({ request }) => {
     const { email, password } = (await request.json()) as { email: string; password: string }
     const user = [ADMIN, MECHANIC].find((u) => u.email === email)

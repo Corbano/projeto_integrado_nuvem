@@ -69,7 +69,7 @@ describe('login', () => {
   it('usuário já autenticado em /entrar vai para o início', async () => {
     setToken('token-admin')
     const router = renderAt('/entrar')
-    await screen.findByRole('heading', { name: 'Início' })
+    await screen.findByRole('heading', { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), Ana$/ })
     expect(router.state.location.pathname).toBe('/')
   })
 })
@@ -112,7 +112,7 @@ describe('sessão', () => {
   it('logout limpa o armazenamento e volta a /entrar', async () => {
     setToken('token-admin')
     const router = renderAt('/')
-    await screen.findByText(`Olá, ${ADMIN.name}.`)
+    await screen.findByRole('heading', { level: 1, name: /, Ana$/ })
     await userEvent.setup().click(screen.getByRole('button', { name: 'Sair' }))
     await screen.findByRole('heading', { name: 'Entrar' })
     expect(getToken()).toBeNull()
