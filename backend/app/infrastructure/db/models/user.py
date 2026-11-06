@@ -1,4 +1,4 @@
-﻿from sqlalchemy import String, true
+from sqlalchemy import String, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.db.base import Base, SoftDeleteMixin, TimestampMixin

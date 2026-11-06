@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.infrastructure.db.models.user import UserModel
