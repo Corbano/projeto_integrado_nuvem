@@ -96,7 +96,7 @@ def test_soft_delete_missing_raises(repo):
         repo.soft_delete(999)
 
 
-def test_has_vehicles_is_false_until_b2(repo):
+def test_has_vehicles_is_false_without_vehicles(repo):
     saved = repo.add(new_customer())
 
     assert repo.has_vehicles(saved.id) is False

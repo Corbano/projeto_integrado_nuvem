@@ -9,6 +9,7 @@ from app.domain.customer import Customer
 from app.domain.document import normalize_digits
 from app.domain.errors import ConflictError, NotFoundError
 from app.infrastructure.db.models.customer import CustomerModel
+from app.infrastructure.db.models.vehicle import VehicleModel
 
 _DUPLICATE = "Já existe um cliente com este CPF/CNPJ"
 _MASKED_NUMBER = re.compile(r"[\d.\-/\s()]*\d[\d.\-/\s()]*")
@@ -103,8 +104,12 @@ class SqlCustomerRepository:
         self._db.commit()
 
     def has_vehicles(self, customer_id: int) -> bool:
-        # Ligado na B2 (tabela vehicles ainda não existe).
-        return False
+        stmt = (
+            select(func.count())
+            .select_from(VehicleModel)
+            .where(VehicleModel.customer_id == customer_id, VehicleModel.deleted_at.is_(None))
+        )
+        return bool(self._db.scalar(stmt))
 
     def list_page(
         self, *, offset: int, limit: int, search: str | None

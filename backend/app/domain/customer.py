@@ -28,7 +28,7 @@ class CustomerRepository(Protocol):
     def soft_delete(self, customer_id: int, *, actor_id: int | None = None) -> None: ...
 
     def has_vehicles(self, customer_id: int) -> bool:
-        """Verdadeiro se o cliente tem veículos ativos (ligado na B2)."""
+        """Verdadeiro se o cliente tem veículos ativos."""
         ...
 
     def list_page(

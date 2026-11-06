@@ -88,3 +88,34 @@ def test_migration_0003_adds_unique_active_document_and_downgrades(tmp_path):
     after = inspect(create_engine(url))
     assert "active_document" not in {c["name"] for c in after.get_columns("customers")}
     assert "customers" in after.get_table_names()
+
+
+def test_migration_0004_creates_and_drops_vehicles(tmp_path):
+    url = f"sqlite:///{tmp_path / 'migration_vehicles.db'}"
+    cfg = alembic_config(url)
+
+    command.upgrade(cfg, "head")
+    inspector = inspect(create_engine(url))
+    columns = {c["name"] for c in inspector.get_columns("vehicles")}
+
+    assert {
+        "id", "customer_id", "plate", "active_plate", "brand", "model", "year", "engine",
+        "fuel", "color", "chassis", "active_chassis", "renavam", "current_km",
+        "created_at", "updated_at", "deleted_at", "created_by_id", "updated_by_id",
+    } <= columns
+    indexes = inspector.get_indexes("vehicles")
+    indexed = {tuple(ix["column_names"]) for ix in indexes}
+    assert ("plate",) in indexed
+    assert ("customer_id",) in indexed
+    unique = {tuple(ix["column_names"]) for ix in indexes if ix["unique"]}
+    assert unique == {("active_plate",), ("active_chassis",)}
+    assert not any(
+        ix["unique"] for ix in indexes if ix["column_names"] in (["plate"], ["chassis"])
+    )
+    fks = {fk["referred_table"] for fk in inspector.get_foreign_keys("vehicles")}
+    assert fks == {"users", "customers"}
+
+    command.downgrade(cfg, "0003")
+    after = inspect(create_engine(url))
+    assert "vehicles" not in after.get_table_names()
+    assert "customers" in after.get_table_names()
