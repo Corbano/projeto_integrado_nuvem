@@ -110,8 +110,16 @@ class CheckinService:
     # ---- fotos ----------------------------------------------------------------------------
 
     def presign_photo(self, checkin_id: int, data: PhotoPresignIn) -> PhotoPresignOut:
-        self._checkin_or_404(checkin_id)
         validate_photo(data.content_type, data.size_bytes)
+        try:
+            return self._presign_locked(checkin_id, data)
+        except BaseException:
+            self._uow.rollback()
+            raise
+
+    def _presign_locked(self, checkin_id: int, data: PhotoPresignIn) -> PhotoPresignOut:
+        # Trava o check-in ANTES de contar: presigns concorrentes serializam (efetivo no MySQL).
+        self._checkin_or_404(checkin_id, lock=True)
         now = self._now()
         pending_since = now - timedelta(seconds=PHOTO_URL_EXPIRES_SECONDS)
         if self._photos.count_active(checkin_id, pending_since=pending_since) >= (
@@ -149,11 +157,12 @@ class CheckinService:
         )
 
     def confirm_photo(self, checkin_id: int, photo_id: int) -> PhotoOut:
-        self._checkin_or_404(checkin_id)
-        photo = self._photo_or_404(checkin_id, photo_id)
-        if photo.confirmed:
-            return self._photo_out(photo)
         try:
+            self._checkin_or_404(checkin_id, lock=True)  # antes de contar (ver presign)
+            photo = self._photo_or_404(checkin_id, photo_id)
+            if photo.confirmed:
+                self._uow.rollback()  # libera a trava
+                return self._photo_out(photo)
             stored = self._storage.stat(photo.storage_key)
             if stored is None:
                 raise BusinessRuleError("O arquivo ainda não foi enviado ao armazenamento")
@@ -168,7 +177,8 @@ class CheckinService:
             if self._photos.count_confirmed(checkin_id) >= MAX_PHOTOS_PER_CHECKIN:
                 raise BusinessRuleError(_PHOTO_LIMIT)
             now = self._now()
-            self._photos.mark_confirmed(photo.id, size_bytes=stored.size_bytes, at=now)
+            if not self._photos.mark_confirmed(photo.id, size_bytes=stored.size_bytes, at=now):
+                raise NotFoundError("Foto não encontrada")
             self._uow.commit()
         except BaseException:
             self._uow.rollback()
@@ -190,8 +200,12 @@ class CheckinService:
 
     # ---- helpers --------------------------------------------------------------------------
 
-    def _checkin_or_404(self, checkin_id: int) -> Checkin:
-        checkin = self._checkins.get_by_id(checkin_id)
+    def _checkin_or_404(self, checkin_id: int, *, lock: bool = False) -> Checkin:
+        checkin = (
+            self._checkins.get_for_update(checkin_id)
+            if lock
+            else self._checkins.get_by_id(checkin_id)
+        )
         if checkin is None:
             raise NotFoundError("Check-in não encontrado")
         return checkin

@@ -484,3 +484,82 @@ def test_failed_storage_delete_keeps_row(client, setup, storage, db_session):
         client.delete(f"{CHECKINS}/{cid}/photos/{photo_id}", headers=header)
 
     assert len(db_session.scalars(select(CheckinPhotoModel)).all()) == 1
+
+
+# ---- trava do check-in, 503 do armazenamento e confirm concorrente ------------------------
+
+
+def test_presign_and_confirm_lock_checkin_before_counting(client, setup, storage, monkeypatch):
+    from app.infrastructure.repositories.checkin_repository import (
+        SqlCheckinPhotoRepository,
+        SqlCheckinRepository,
+    )
+
+    header, vid = setup
+    cid = make_checkin(client, header, vid)["id"]
+    events: list[str] = []
+    real_lock = SqlCheckinRepository.get_for_update
+    real_active = SqlCheckinPhotoRepository.count_active
+    real_confirmed = SqlCheckinPhotoRepository.count_confirmed
+
+    def lock(self, checkin_id):
+        events.append("lock")
+        return real_lock(self, checkin_id)
+
+    def active(self, *a, **kw):
+        events.append("count_active")
+        return real_active(self, *a, **kw)
+
+    def confirmed(self, *a, **kw):
+        events.append("count_confirmed")
+        return real_confirmed(self, *a, **kw)
+
+    monkeypatch.setattr(SqlCheckinRepository, "get_for_update", lock)
+    monkeypatch.setattr(SqlCheckinPhotoRepository, "count_active", active)
+    monkeypatch.setattr(SqlCheckinPhotoRepository, "count_confirmed", confirmed)
+
+    upload_and_confirm(client, header, storage, cid)
+
+    # No SQLite o FOR UPDATE é ignorado; a trava real só vale no MySQL (aqui valida-se a ordem).
+    assert events == ["lock", "count_active", "lock", "count_confirmed"]
+
+
+def test_confirm_after_concurrent_delete_is_404(client, setup, storage, monkeypatch):
+    from app.infrastructure.repositories.checkin_repository import SqlCheckinPhotoRepository
+
+    header, vid = setup
+    cid = make_checkin(client, header, vid)["id"]
+    photo_id = presign(client, header, cid).json()["photo_id"]
+    storage.put(storage.presign_uploads[-1]["key"], b"x", "image/jpeg")
+    monkeypatch.setattr(SqlCheckinPhotoRepository, "mark_confirmed", lambda *a, **kw: False)
+
+    response = client.post(f"{CHECKINS}/{cid}/photos/{photo_id}/confirm", headers=header)
+
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize("operation", ["presign_upload", "presign_download", "stat", "delete"])
+def test_storage_unavailable_returns_503_envelope(client, setup, storage, operation):
+    from app.domain.errors import StorageUnavailableError
+
+    header, vid = setup
+    cid = make_checkin(client, header, vid)["id"]
+    photo_id, key, _ = upload_and_confirm(client, header, storage, cid)
+
+    def boom(*a, **kw):
+        raise StorageUnavailableError("Armazenamento de arquivos indisponível.")
+
+    setattr(storage, operation, boom)
+    if operation == "presign_upload":
+        response = presign(client, header, cid)
+    elif operation == "presign_download":
+        response = client.get(f"{CHECKINS}/{cid}", headers=header)
+    elif operation == "stat":
+        new = presign(client, header, cid).json()["photo_id"]
+        response = client.post(f"{CHECKINS}/{cid}/photos/{new}/confirm", headers=header)
+    else:
+        response = client.delete(f"{CHECKINS}/{cid}/photos/{photo_id}", headers=header)
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "storage_unavailable"
+    assert key not in response.text

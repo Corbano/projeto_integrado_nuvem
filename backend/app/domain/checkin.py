@@ -120,6 +120,10 @@ class CheckinRepository(Protocol):
         """Com checklist e fotos."""
         ...
 
+    def get_for_update(self, checkin_id: int) -> Checkin | None:
+        """Bloqueia a linha do check-in até o fim da transação (MySQL); sem checklist/fotos."""
+        ...
+
     def list_page(
         self, *, offset: int, limit: int, vehicle_id: int | None = None
     ) -> tuple[list[Checkin], int]:
@@ -140,8 +144,8 @@ class CheckinPhotoRepository(Protocol):
 
     def count_confirmed(self, checkin_id: int) -> int: ...
 
-    def mark_confirmed(self, photo_id: int, *, size_bytes: int, at: datetime) -> None:
-        """Sem commit."""
+    def mark_confirmed(self, photo_id: int, *, size_bytes: int, at: datetime) -> bool:
+        """Sem commit. `False` se a foto não existe mais (ex.: removida em paralelo)."""
         ...
 
     def delete(self, photo_id: int) -> None:

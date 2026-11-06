@@ -94,8 +94,10 @@ Recomendações para o bucket:
 
 - Bucket **privado**, com *Block Public Access* ativo nas 4 opções e criptografia padrão (SSE-S3 ou KMS); leitura só por URL assinada.
 - **CORS** liberando apenas a origem do frontend (ex.: `https://app.exemplo.com`), métodos `POST` e `PUT`, cabeçalhos `*` e `ExposeHeaders: ETag`.
-- Permissões da role IAM da instância EC2, restritas ao prefixo: `s3:PutObject`, `s3:GetObject` e `s3:DeleteObject` em `arn:aws:s3:::SEU-BUCKET/checkins/*` (nada de `s3:*` nem `ListBucket` público).
-- Opcional: regra de ciclo de vida para expirar uploads incompletos/órfãos (reservas nunca confirmadas) sob `checkins/`.
+- Permissões da role IAM da instância EC2: `s3:PutObject`, `s3:GetObject` e `s3:DeleteObject` em `arn:aws:s3:::SEU-BUCKET/checkins/*` **e** `s3:ListBucket` em `arn:aws:s3:::SEU-BUCKET` (sem ela, chave inexistente devolve 403 em vez de 404 e o `confirm` falha com 503; nada de `s3:*`).
+- Configure uma regra de ciclo de vida em `checkins/` (expirar objetos e abortar multipart incompletos) para limpar objetos órfãos; as linhas de fotos pendentes nunca confirmadas ficam ocultas e deixam de contar no limite após 15 minutos.
+
+Falhas do S3 (credenciais ausentes, timeout, erro de rede ou `ClientError`) viram **503** `storage_unavailable` ("Armazenamento de arquivos indisponível. Tente novamente em instantes."), sem expor bucket/chave; a causa é logada sem URL assinada. O cliente boto3 usa `connect_timeout=3s`, `read_timeout=5s` e 2 tentativas. Presign e confirm travam a linha do check-in (`SELECT ... FOR UPDATE`) antes de contar fotos, serializando o limite de 10; o bloqueio real só existe no MySQL (SQLite o ignora).
 
 ## Variáveis de ambiente
 

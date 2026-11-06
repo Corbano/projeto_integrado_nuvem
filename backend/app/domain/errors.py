@@ -24,5 +24,9 @@ class PermissionDeniedError(AppError):
     code = "permission_denied"
 
 
+class StorageUnavailableError(AppError):
+    code = "storage_unavailable"
+
+
 class BusinessRuleError(AppError):
     code = "business_rule_violation"

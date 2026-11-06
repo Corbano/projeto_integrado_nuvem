@@ -9,6 +9,7 @@ from app.domain.errors import (
     ConflictError,
     NotFoundError,
     PermissionDeniedError,
+    StorageUnavailableError,
 )
 from app.presentation.errors import register_exception_handlers
 
@@ -38,6 +39,7 @@ def client():
             "auth": AuthenticationError("Sem credenciais"),
             "forbidden": PermissionDeniedError("Proibido"),
             "rule": BusinessRuleError("Regra violada"),
+            "storage": StorageUnavailableError("Armazenamento indisponível"),
         }
         raise errors[kind]
 
@@ -68,6 +70,7 @@ def client():
         ("auth", 401, "authentication_failed"),
         ("forbidden", 403, "permission_denied"),
         ("rule", 422, "business_rule_violation"),
+        ("storage", 503, "storage_unavailable"),
     ],
 )
 def test_domain_errors_map_to_http(client, kind, status, code):

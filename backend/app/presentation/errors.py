@@ -13,6 +13,7 @@ from app.domain.errors import (
     ConflictError,
     NotFoundError,
     PermissionDeniedError,
+    StorageUnavailableError,
 )
 
 logger = logging.getLogger("autocenter.errors")
@@ -23,6 +24,7 @@ _STATUS_BY_ERROR: dict[type[AppError], int] = {
     AuthenticationError: 401,
     PermissionDeniedError: 403,
     BusinessRuleError: 422,
+    StorageUnavailableError: 503,
 }
 
 

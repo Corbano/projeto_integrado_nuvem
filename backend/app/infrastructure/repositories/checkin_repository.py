@@ -108,6 +108,14 @@ class SqlCheckinRepository:
         ).all()
         return self._to_entity(model, list(items), list(photos))
 
+    def get_for_update(self, checkin_id: int) -> Checkin | None:
+        """`SELECT ... FOR UPDATE`: serializa presigns/confirms do mesmo check-in no MySQL.
+        No SQLite (testes) o bloqueio é ignorado."""
+        model = self._db.scalar(
+            select(CheckinModel).where(CheckinModel.id == checkin_id).with_for_update()
+        )
+        return self._to_entity(model) if model else None
+
     def list_page(
         self, *, offset: int, limit: int, vehicle_id: int | None = None
     ) -> tuple[list[Checkin], int]:
@@ -190,12 +198,14 @@ class SqlCheckinPhotoRepository:
             or 0
         )
 
-    def mark_confirmed(self, photo_id: int, *, size_bytes: int, at: datetime) -> None:
+    def mark_confirmed(self, photo_id: int, *, size_bytes: int, at: datetime) -> bool:
         model = self._db.get(CheckinPhotoModel, photo_id)
-        if model is not None:
-            model.size_bytes = size_bytes
-            model.confirmed_at = at
-            self._db.flush()
+        if model is None:
+            return False
+        model.size_bytes = size_bytes
+        model.confirmed_at = at
+        self._db.flush()
+        return True
 
     def delete(self, photo_id: int) -> None:
         model = self._db.get(CheckinPhotoModel, photo_id)
