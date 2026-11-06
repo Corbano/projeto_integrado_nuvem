@@ -2,10 +2,6 @@
 @import "./tokens.css";
 
 @layer base {
-  html {
-    font-size: 15px;
-  }
-
   body {
     margin: 0;
     background-color: var(--color-concreto);
@@ -21,7 +17,7 @@
   h3,
   h4 {
     font-family: var(--font-display);
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.1;
   }
 

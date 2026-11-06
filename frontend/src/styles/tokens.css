@@ -10,6 +10,8 @@
 @import "@fontsource/ibm-plex-sans/latin-ext-600.css";
 
 @theme {
+  /* oleo e decoracao/fundo apenas, nunca texto pequeno; texto sobre oleo e chassi.
+     freio/sinal como texto devem usar as variantes *-texto. */
   --color-concreto: #e7eaeb;
   --color-bancada: #f8f9f9;
   --color-chassi: #15262d;
@@ -19,6 +21,13 @@
   --color-sinal: #2e7a4d;
   --color-risco: #c9d0d2;
 
+  /* chassi a 72% sobre concreto, cor solida (texto secundario) */
+  --color-chassi-suave: #505d62;
+  --color-freio-texto: #a8321f;
+  --color-sinal-texto: #25663f;
+  /* borda de campo (UI, 3:1) */
+  --color-borda-campo: #838f94;
+
   --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --font-sans: "IBM Plex Sans", system-ui, sans-serif;
 
@@ -26,11 +35,16 @@
   --radius-campo: 4px;
   --radius-dialogo: 10px;
 
-  --text-xs: 13px;
-  --text-sm: 15px;
-  --text-base: 15px;
-  --text-lg: 17px;
-  --text-xl: 22px;
-  --text-2xl: 30px;
-  --text-3xl: 44px;
+  --text-mini: 13px;
+  --text-mini--line-height: 1.4;
+  --text-corpo: 15px;
+  --text-corpo--line-height: 1.5;
+  --text-destaque: 17px;
+  --text-destaque--line-height: 1.45;
+  --text-secao: 22px;
+  --text-secao--line-height: 1.2;
+  --text-titulo: 30px;
+  --text-titulo--line-height: 1.1;
+  --text-marca: 44px;
+  --text-marca--line-height: 1;
 }

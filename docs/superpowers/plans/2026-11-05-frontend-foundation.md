@@ -29,9 +29,9 @@
 | `sinal` | `#2E7A4D` | ok, concluído |
 | `risco` | `#C9D0D2` | linhas e bordas de 1 px |
 
-Texto secundário = `chassi` a 68% de opacidade (verificar contraste AA ≥ 4.5:1 sobre `concreto` e `bancada`; ajustar se falhar). Sem gradientes decorativos.
+Variantes para contraste AA: `chassi-suave` `#505D62` (texto secundário, chassi a 72% sobre concreto, cor sólida), `freio-texto` `#A8321F` e `sinal-texto` `#25663F` (freio/sinal como texto), `borda-campo` `#838F94` (borda de campo, 3:1). `oleo` é só decoração/fundo, nunca texto pequeno; texto sobre `oleo` é `chassi`. Sem gradientes decorativos.
 
-**Tipografia:** **Barlow Condensed** (600/700) para títulos, números e a marca: remete a sinalização viária/placa. **IBM Plex Sans** (400/500/600) para texto e campos, 15 px base, `tabular-nums` em tabelas. Escala: 13 / 15 / 17 / 22 / 30 / 44 (títulos condensados em 22+). Linhas de texto ≤ 70 caracteres. Rótulos em *sentence case*; **proibido**: eyebrows em caixa-alta espaçada, "palavra — fragmento", destaque de uma única palavra em título, numeração 01/02/03 sem sequência real, "→" em todo botão.
+**Tipografia:** **Barlow Condensed** (600/700) para títulos, números e a marca: remete a sinalização viária/placa. **IBM Plex Sans** (400/500/600) para texto e campos, 15 px base, `tabular-nums` em tabelas. Escala: 13 / 15 / 17 / 22 / 30 / 44 (títulos condensados em 22+), tokens nomeados `text-mini`, `text-corpo`, `text-destaque`, `text-secao`, `text-titulo`, `text-marca` (sem sobrescrever os `text-*` padrão do Tailwind). Linhas de texto ≤ 70 caracteres. Rótulos em *sentence case*; **proibido**: eyebrows em caixa-alta espaçada, "palavra — fragmento", destaque de uma única palavra em título, numeração 01/02/03 sem sequência real, "→" em todo botão.
 
 **Forma:** raios diferentes por papel (placa 6, campos 4, diálogos 10, avatar redondo); sem sombra em cards (usar linha de 1 px `risco`); sombra só em diálogo e menu. Linhas de tabela têm uma **barra de status de 3 px à esquerda** (como etiqueta), codificando o estado (ex.: usuário inativo = `risco`, admin = `esmalte`). Nada de grade de cards idênticos: listas e tabelas primeiro.
 
