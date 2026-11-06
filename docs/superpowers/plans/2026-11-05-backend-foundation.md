@@ -608,6 +608,9 @@ class TokenCodec(Protocol):
 - [ ] **Step 5: Escrever o teste que falha — `backend/tests/test_security.py`**
 
 ```python
+from datetime import UTC, datetime, timedelta
+
+import jwt
 import pytest
 
 from app.domain.errors import AuthenticationError, BusinessRuleError
@@ -657,6 +660,21 @@ def test_token_signed_with_other_secret_is_rejected():
 
     with pytest.raises(AuthenticationError):
         JwtCodec("b" * 40).decode(token)
+
+
+def test_token_without_exp_is_rejected():
+    token = jwt.encode({"sub": "1", "role": "admin"}, SECRET, algorithm="HS256")
+
+    with pytest.raises(AuthenticationError):
+        JwtCodec(SECRET).decode(token)
+
+
+def test_token_without_sub_is_rejected():
+    exp = datetime.now(UTC) + timedelta(minutes=5)
+    token = jwt.encode({"role": "admin", "exp": exp}, SECRET, algorithm="HS256")
+
+    with pytest.raises(AuthenticationError):
+        JwtCodec(SECRET).decode(token)
 
 
 def test_garbage_token_is_rejected():
@@ -725,7 +743,12 @@ class JwtCodec:
 
     def decode(self, token: str) -> TokenPayload:
         try:
-            claims = jwt.decode(token, self._secret, algorithms=[self._algorithm])
+            claims = jwt.decode(
+                token,
+                self._secret,
+                algorithms=[self._algorithm],
+                options={"require": ["exp", "sub"]},
+            )
             return TokenPayload(user_id=int(claims["sub"]), role=Role(claims["role"]))
         except (jwt.PyJWTError, KeyError, ValueError) as exc:
             raise AuthenticationError("Token inválido ou expirado") from exc
@@ -734,7 +757,7 @@ class JwtCodec:
 - [ ] **Step 8: Rodar e ver passar**
 
 Run: `python -m pytest tests/test_security.py -v`
-Expected: PASS (7 passed).
+Expected: PASS (9 passed).
 
 - [ ] **Step 9: Commit**
 

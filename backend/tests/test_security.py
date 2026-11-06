@@ -1,3 +1,6 @@
+from datetime import UTC, datetime, timedelta
+
+import jwt
 import pytest
 
 from app.domain.errors import AuthenticationError, BusinessRuleError
@@ -47,6 +50,21 @@ def test_token_signed_with_other_secret_is_rejected():
 
     with pytest.raises(AuthenticationError):
         JwtCodec("b" * 40).decode(token)
+
+
+def test_token_without_exp_is_rejected():
+    token = jwt.encode({"sub": "1", "role": "admin"}, SECRET, algorithm="HS256")
+
+    with pytest.raises(AuthenticationError):
+        JwtCodec(SECRET).decode(token)
+
+
+def test_token_without_sub_is_rejected():
+    exp = datetime.now(UTC) + timedelta(minutes=5)
+    token = jwt.encode({"role": "admin", "exp": exp}, SECRET, algorithm="HS256")
+
+    with pytest.raises(AuthenticationError):
+        JwtCodec(SECRET).decode(token)
 
 
 def test_garbage_token_is_rejected():

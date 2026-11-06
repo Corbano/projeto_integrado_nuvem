@@ -51,7 +51,12 @@ class JwtCodec:
 
     def decode(self, token: str) -> TokenPayload:
         try:
-            claims = jwt.decode(token, self._secret, algorithms=[self._algorithm])
+            claims = jwt.decode(
+                token,
+                self._secret,
+                algorithms=[self._algorithm],
+                options={"require": ["exp", "sub"]},
+            )
             return TokenPayload(user_id=int(claims["sub"]), role=Role(claims["role"]))
         except (jwt.PyJWTError, KeyError, ValueError) as exc:
             raise AuthenticationError("Token inválido ou expirado") from exc
