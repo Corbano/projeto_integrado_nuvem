@@ -1,50 +1,101 @@
-@import "@fontsource/barlow-condensed/latin-600.css";
+/* Barlow Condensed 700: so placa e numeros grandes de KPI. */
 @import "@fontsource/barlow-condensed/latin-700.css";
-@import "@fontsource/barlow-condensed/latin-ext-600.css";
 @import "@fontsource/barlow-condensed/latin-ext-700.css";
-@import "@fontsource/ibm-plex-sans/latin-400.css";
-@import "@fontsource/ibm-plex-sans/latin-500.css";
-@import "@fontsource/ibm-plex-sans/latin-600.css";
-@import "@fontsource/ibm-plex-sans/latin-ext-400.css";
-@import "@fontsource/ibm-plex-sans/latin-ext-500.css";
-@import "@fontsource/ibm-plex-sans/latin-ext-600.css";
+
+/* Inter variavel: so os subconjuntos latin e latin-ext (portugues), self-hosted. */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 @theme {
-  /* oleo e decoracao/fundo apenas, nunca texto pequeno; texto sobre oleo e chassi.
-     freio/sinal como texto devem usar as variantes *-texto. */
-  --color-concreto: #e7eaeb;
-  --color-bancada: #f8f9f9;
-  --color-chassi: #15262d;
-  --color-esmalte: #0e5a6b;
-  --color-oleo: #d68a00;
-  --color-freio: #bf3b2d;
-  --color-sinal: #2e7a4d;
-  --color-risco: #c9d0d2;
+  /* Marca e estrutura */
+  --color-navy: #10194a;
+  --color-navy-2: #1b2766;
+  --color-azul: #2457e6;
+  /* hover/pressionado do azul */
+  --color-azul-escuro: #1b45bd;
+  --color-menta: #14c9a4;
+  --color-fundo: #f4f6fb;
+  --color-superficie: #ffffff;
+  --color-tinta: #141b34;
+  --color-tinta-suave: #5a6482;
+  --color-linha: #e3e7f1;
+  /* borda de campo: >= 3:1 sobre superficie (o #8C96B2 do brief dava 2,95:1) */
+  --color-borda-campo: #8892af;
 
-  /* chassi a 72% sobre concreto, cor solida (texto secundario) */
-  --color-chassi-suave: #505d62;
-  --color-freio-texto: #a8321f;
-  --color-sinal-texto: #25663f;
-  /* borda de campo (UI, 3:1) */
-  --color-borda-campo: #838f94;
+  /* Estados. Cor pura so como ponto, barra ou icone; texto usa *-texto. */
+  --color-ok: #1fa971;
+  --color-ok-texto: #13744d;
+  --color-ok-fundo: #e3f6ee;
+  --color-atencao: #f2a20c;
+  --color-atencao-texto: #8a5a00;
+  --color-atencao-fundo: #fff3d6;
+  --color-critico: #e5484d;
+  --color-critico-texto: #b3262b;
+  --color-critico-fundo: #fde8e9;
+  --color-info-fundo: #e8eeff;
 
+  /* Acentos por funcionalidade (barra no topo do card) */
+  --color-acento-azul: #2457e6;
+  --color-acento-menta: #14c9a4;
+  --color-acento-violeta: #6b3fe0;
+  --color-acento-ciano: #0e8fb0;
+  --color-acento-laranja: #f2711c;
+  --color-acento-rosa: #d9468f;
+
+  /* Colunas do kanban (fundo suave) */
+  --color-coluna-azul: #eaf0ff;
+  --color-coluna-verde: #e5f6ee;
+  --color-coluna-laranja: #fff0e1;
+  --color-coluna-cinza: #eef0f6;
+
+  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
 
   --radius-placa: 6px;
-  --radius-campo: 4px;
-  --radius-dialogo: 10px;
+  --radius-controle: 10px;
+  --radius-card: 16px;
+  --radius-dialogo: 20px;
+  --radius-pilula: 9999px;
 
+  --shadow-card: 0 1px 2px rgba(16, 25, 74, 0.06), 0 8px 24px rgba(16, 25, 74, 0.06);
+  --shadow-card-hover: 0 2px 4px rgba(16, 25, 74, 0.08), 0 14px 32px rgba(16, 25, 74, 0.1);
+  --shadow-menu: 0 4px 12px rgba(16, 25, 74, 0.1), 0 1px 3px rgba(16, 25, 74, 0.08);
+  --shadow-dialogo: 0 24px 64px rgba(16, 25, 74, 0.22), 0 2px 8px rgba(16, 25, 74, 0.08);
+
+  /* Escala tipografica nomeada (nao sobrescreve text-sm/base/lg do Tailwind) */
+  --text-legenda: 12px;
+  --text-legenda--line-height: 1.4;
   --text-mini: 13px;
-  --text-mini--line-height: 1.4;
-  --text-corpo: 15px;
-  --text-corpo--line-height: 1.5;
-  --text-destaque: 17px;
-  --text-destaque--line-height: 1.45;
+  --text-mini--line-height: 1.45;
+  --text-corpo: 14px;
+  --text-corpo--line-height: 1.55;
+  --text-destaque: 15px;
+  --text-destaque--line-height: 1.55;
+  --text-card: 18px;
+  --text-card--line-height: 1.35;
   --text-secao: 22px;
-  --text-secao--line-height: 1.2;
-  --text-titulo: 30px;
-  --text-titulo--line-height: 1.1;
-  --text-marca: 44px;
-  --text-marca--line-height: 1;
+  --text-secao--line-height: 1.3;
+  --text-titulo: 28px;
+  --text-titulo--line-height: 1.2;
+  --text-kpi: 34px;
+  --text-kpi--line-height: 1;
+  --text-marca: 40px;
+  --text-marca--line-height: 1.12;
 }

@@ -5,23 +5,57 @@ import { describe, expect, it } from 'vitest'
 const css = readFileSync(resolve(__dirname, 'tokens.css'), 'utf-8')
 
 const colors: Record<string, string> = {
-  concreto: '#E7EAEB',
-  bancada: '#F8F9F9',
-  chassi: '#15262D',
-  esmalte: '#0E5A6B',
-  oleo: '#D68A00',
-  freio: '#BF3B2D',
-  sinal: '#2E7A4D',
-  risco: '#C9D0D2',
+  navy: '#10194A',
+  'navy-2': '#1B2766',
+  azul: '#2457E6',
+  'azul-escuro': '#1B45BD',
+  menta: '#14C9A4',
+  fundo: '#F4F6FB',
+  superficie: '#FFFFFF',
+  tinta: '#141B34',
+  'tinta-suave': '#5A6482',
+  linha: '#E3E7F1',
+  'borda-campo': '#8892AF',
+  ok: '#1FA971',
+  'ok-texto': '#13744D',
+  'ok-fundo': '#E3F6EE',
+  atencao: '#F2A20C',
+  'atencao-texto': '#8A5A00',
+  'atencao-fundo': '#FFF3D6',
+  critico: '#E5484D',
+  'critico-texto': '#B3262B',
+  'critico-fundo': '#FDE8E9',
+  'info-fundo': '#E8EEFF',
+  'acento-azul': '#2457E6',
+  'acento-menta': '#14C9A4',
+  'acento-violeta': '#6B3FE0',
+  'acento-ciano': '#0E8FB0',
+  'acento-laranja': '#F2711C',
+  'acento-rosa': '#D9468F',
+  'coluna-azul': '#EAF0FF',
+  'coluna-verde': '#E5F6EE',
+  'coluna-laranja': '#FFF0E1',
+  'coluna-cinza': '#EEF0F6',
 }
 
 const texts: Record<string, [string, string]> = {
-  mini: ['13px', '1.4'],
-  corpo: ['15px', '1.5'],
-  destaque: ['17px', '1.45'],
-  secao: ['22px', '1.2'],
-  titulo: ['30px', '1.1'],
-  marca: ['44px', '1'],
+  legenda: ['12px', '1.4'],
+  mini: ['13px', '1.45'],
+  corpo: ['14px', '1.55'],
+  destaque: ['15px', '1.55'],
+  card: ['18px', '1.35'],
+  secao: ['22px', '1.3'],
+  titulo: ['28px', '1.2'],
+  kpi: ['34px', '1'],
+  marca: ['40px', '1.12'],
+}
+
+const radii: Record<string, string> = {
+  placa: '6px',
+  controle: '10px',
+  card: '16px',
+  dialogo: '20px',
+  pilula: '9999px',
 }
 
 function token(name: string): string | undefined {
@@ -30,7 +64,7 @@ function token(name: string): string | undefined {
 
 function hex(name: string): string {
   const v = token(`color-${name}`)
-  if (!v || !/^#[0-9a-fA-F]{6}$/.test(v)) throw new Error(`token --color-${name} ausente ou invalido`)
+  if (!v || !/^#[0-9a-fA-F]{6}$/.test(v)) throw new Error(`token --color-${name} ausente ou inválido`)
   return v
 }
 
@@ -52,9 +86,18 @@ describe('tokens.css', () => {
     expect(hex(name).toUpperCase()).toBe(expected)
   })
 
-  it('define as familias de fonte', () => {
-    expect(token('font-display')).toBeDefined()
-    expect(token('font-sans')).toBeDefined()
+  it('não mantém os tokens da paleta antiga', () => {
+    for (const old of ['concreto', 'bancada', 'chassi', 'esmalte', 'oleo', 'freio', 'sinal', 'risco']) {
+      expect(css).not.toMatch(new RegExp(`--color-${old}\\b`))
+    }
+  })
+
+  it('usa Inter como fonte de texto e Barlow Condensed como display', () => {
+    expect(token('font-sans')).toMatch(/^"Inter Variable"/)
+    expect(token('font-display')).toMatch(/^"Barlow Condensed"/)
+    expect(css).toMatch(/inter-latin-wght-normal\.woff2/)
+    expect(css).toMatch(/inter-latin-ext-wght-normal\.woff2/)
+    expect(css).not.toMatch(/ibm-plex/)
   })
 
   it.each(Object.entries(texts))('define --text-%s', (name, [size, lh]) => {
@@ -62,7 +105,16 @@ describe('tokens.css', () => {
     expect(token(`text-${name}--line-height`)).toBe(lh)
   })
 
-  it('nao redefine utilitarios padrao do Tailwind', () => {
+  it.each(Object.entries(radii))('define --radius-%s como %s', (name, value) => {
+    expect(token(`radius-${name}`)).toBe(value)
+  })
+
+  it('define as sombras de card e diálogo', () => {
+    expect(token('shadow-card')).toBe('0 1px 2px rgba(16, 25, 74, 0.06), 0 8px 24px rgba(16, 25, 74, 0.06)')
+    expect(token('shadow-dialogo')).toBeDefined()
+  })
+
+  it('não redefine utilitários padrão do Tailwind', () => {
     for (const d of ['xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl']) {
       expect(css).not.toMatch(new RegExp(`--text-${d}\\s*:`))
     }
@@ -70,23 +122,37 @@ describe('tokens.css', () => {
 })
 
 describe('contraste WCAG AA', () => {
-  const surfaces = ['concreto', 'bancada']
+  const text = (fg: string, bg: string) => ratio(hex(fg), hex(bg))
 
-  it.each(['chassi', 'chassi-suave', 'esmalte', 'freio-texto', 'sinal-texto'].flatMap((fg) =>
-    surfaces.map((bg) => [fg, bg]),
-  ))('%s sobre %s >= 4.5', (fg, bg) => {
-    expect(ratio(hex(fg), hex(bg))).toBeGreaterThanOrEqual(4.5)
+  it.each([
+    ['tinta', 'superficie'],
+    ['tinta', 'fundo'],
+    ['tinta-suave', 'superficie'],
+    ['tinta-suave', 'fundo'],
+    ['tinta-suave', 'coluna-cinza'],
+    ['azul', 'superficie'],
+    ['azul', 'fundo'],
+    ['azul', 'info-fundo'],
+    ['ok-texto', 'ok-fundo'],
+    ['ok-texto', 'superficie'],
+    ['atencao-texto', 'atencao-fundo'],
+    ['atencao-texto', 'superficie'],
+    ['critico-texto', 'critico-fundo'],
+    ['critico-texto', 'superficie'],
+    ['navy', 'menta'],
+  ])('%s sobre %s >= 4.5', (fg, bg) => {
+    expect(text(fg, bg)).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('borda-campo sobre bancada >= 3', () => {
-    expect(ratio(hex('borda-campo'), hex('bancada'))).toBeGreaterThanOrEqual(3)
-  })
-
-  it.each(['esmalte', 'freio', 'sinal'])('branco sobre %s >= 4.5', (bg) => {
+  it.each(['azul', 'azul-escuro', 'navy', 'navy-2', 'critico-texto'])('branco sobre %s >= 4.5', (bg) => {
     expect(ratio('#FFFFFF', hex(bg))).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('chassi sobre oleo >= 4.5', () => {
-    expect(ratio(hex('chassi'), hex('oleo'))).toBeGreaterThanOrEqual(4.5)
+  it('borda-campo sobre superficie >= 3', () => {
+    expect(text('borda-campo', 'superficie')).toBeGreaterThanOrEqual(3)
+  })
+
+  it.each(['superficie', 'fundo'])('anel de foco azul sobre %s >= 3', (bg) => {
+    expect(text('azul', bg)).toBeGreaterThanOrEqual(3)
   })
 })
