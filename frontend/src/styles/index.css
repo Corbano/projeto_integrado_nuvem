@@ -37,3 +37,47 @@
     }
   }
 }
+
+/* Movimento so em resposta a acao: dialogo, toast. */
+@keyframes ac-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ac-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ac-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ac-dialog-in {
+  animation: ac-dialog-in 160ms ease-out;
+}
+
+.ac-fade-in {
+  animation: ac-fade-in 160ms ease-out;
+}
+
+.ac-toast-in {
+  animation: ac-toast-in 200ms ease-out;
+}
