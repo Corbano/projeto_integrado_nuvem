@@ -167,3 +167,40 @@ def test_delete_missing_returns_404(client, auth_header):
     response = client.delete(f"{URL}/9999", headers=auth_header(Role.ADMIN))
 
     assert response.status_code == 404
+
+
+def test_admin_cannot_deactivate_self(client, auth_header):
+    header = auth_header(Role.ADMIN)
+    me = client.get("/api/v1/auth/me", headers=header).json()
+
+    response = client.patch(f"{URL}/{me['id']}", json={"active": False}, headers=header)
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "business_rule_violation"
+    assert client.get("/api/v1/auth/me", headers=header).status_code == 200
+
+
+def test_admin_cannot_demote_self(client, auth_header):
+    header = auth_header(Role.ADMIN)
+    me = client.get("/api/v1/auth/me", headers=header).json()
+
+    response = client.patch(f"{URL}/{me['id']}", json={"role": "mechanic"}, headers=header)
+
+    assert response.status_code == 422
+
+
+def test_admin_can_edit_own_name_and_keep_admin_role(client, auth_header):
+    header = auth_header(Role.ADMIN)
+    me = client.get("/api/v1/auth/me", headers=header).json()
+
+    renamed = client.patch(f"{URL}/{me['id']}", json={"name": "Novo"}, headers=header)
+    same_role = client.patch(f"{URL}/{me['id']}", json={"role": "admin"}, headers=header)
+
+    assert renamed.status_code == 200 and renamed.json()["name"] == "Novo"
+    assert same_role.status_code == 200
+
+
+def test_list_rejects_huge_page_number(client, auth_header):
+    response = client.get(f"{URL}?page=99999999999999999999", headers=auth_header(Role.ADMIN))
+
+    assert response.status_code == 422

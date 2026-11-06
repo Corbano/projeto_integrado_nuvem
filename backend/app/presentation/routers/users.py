@@ -18,7 +18,7 @@ router = APIRouter(
 
 @router.get("", response_model=Page[UserOut])
 def list_users(
-    page: int = Query(1, ge=1),
+    page: int = Query(1, ge=1, le=1_000_000),
     size: int = Query(20, ge=1, le=100),
     q: str | None = Query(None, max_length=100),
     service: UserService = Depends(get_user_service),
@@ -38,9 +38,12 @@ def get_user(user_id: int, service: UserService = Depends(get_user_service)):
 
 @router.patch("/{user_id}", response_model=UserOut)
 def update_user(
-    user_id: int, body: UserUpdate, service: UserService = Depends(get_user_service)
+    user_id: int,
+    body: UserUpdate,
+    actor: User = Depends(require_admin),
+    service: UserService = Depends(get_user_service),
 ):
-    return service.update(user_id, body)
+    return service.update(user_id, body, actor_id=actor.id)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

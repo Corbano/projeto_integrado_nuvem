@@ -2,6 +2,7 @@ from app.application.dtos.common import Page
 from app.application.dtos.user import UserCreate, UserOut, UserUpdate
 from app.application.ports import PasswordHasher
 from app.domain.errors import BusinessRuleError, ConflictError, NotFoundError
+from app.domain.roles import Role
 from app.domain.user import User, UserRepository
 
 
@@ -36,7 +37,11 @@ class UserService:
             items=[UserOut.from_entity(u) for u in users], total=total, page=page, size=size
         )
 
-    def update(self, user_id: int, data: UserUpdate) -> UserOut:
+    def update(self, user_id: int, data: UserUpdate, *, actor_id: int) -> UserOut:
+        if user_id == actor_id and (
+            data.active is False or (data.role is not None and data.role is not Role.ADMIN)
+        ):
+            raise BusinessRuleError("Você não pode desativar nem rebaixar o próprio usuário")
         user = self._get_or_404(user_id)
         if data.name is not None:
             user.name = data.name

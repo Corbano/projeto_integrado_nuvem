@@ -1978,6 +1978,43 @@ def test_delete_missing_returns_404(client, auth_header):
     response = client.delete(f"{URL}/9999", headers=auth_header(Role.ADMIN))
 
     assert response.status_code == 404
+
+
+def test_admin_cannot_deactivate_self(client, auth_header):
+    header = auth_header(Role.ADMIN)
+    me = client.get("/api/v1/auth/me", headers=header).json()
+
+    response = client.patch(f"{URL}/{me['id']}", json={"active": False}, headers=header)
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "business_rule_violation"
+    assert client.get("/api/v1/auth/me", headers=header).status_code == 200
+
+
+def test_admin_cannot_demote_self(client, auth_header):
+    header = auth_header(Role.ADMIN)
+    me = client.get("/api/v1/auth/me", headers=header).json()
+
+    response = client.patch(f"{URL}/{me['id']}", json={"role": "mechanic"}, headers=header)
+
+    assert response.status_code == 422
+
+
+def test_admin_can_edit_own_name_and_keep_admin_role(client, auth_header):
+    header = auth_header(Role.ADMIN)
+    me = client.get("/api/v1/auth/me", headers=header).json()
+
+    renamed = client.patch(f"{URL}/{me['id']}", json={"name": "Novo"}, headers=header)
+    same_role = client.patch(f"{URL}/{me['id']}", json={"role": "admin"}, headers=header)
+
+    assert renamed.status_code == 200 and renamed.json()["name"] == "Novo"
+    assert same_role.status_code == 200
+
+
+def test_list_rejects_huge_page_number(client, auth_header):
+    response = client.get(f"{URL}?page=99999999999999999999", headers=auth_header(Role.ADMIN))
+
+    assert response.status_code == 422
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -1992,6 +2029,7 @@ from app.application.dtos.common import Page
 from app.application.dtos.user import UserCreate, UserOut, UserUpdate
 from app.application.ports import PasswordHasher
 from app.domain.errors import BusinessRuleError, ConflictError, NotFoundError
+from app.domain.roles import Role
 from app.domain.user import User, UserRepository
 
 
@@ -2026,7 +2064,11 @@ class UserService:
             items=[UserOut.from_entity(u) for u in users], total=total, page=page, size=size
         )
 
-    def update(self, user_id: int, data: UserUpdate) -> UserOut:
+    def update(self, user_id: int, data: UserUpdate, *, actor_id: int) -> UserOut:
+        if user_id == actor_id and (
+            data.active is False or (data.role is not None and data.role is not Role.ADMIN)
+        ):
+            raise BusinessRuleError("Você não pode desativar nem rebaixar o próprio usuário")
         user = self._get_or_404(user_id)
         if data.name is not None:
             user.name = data.name
@@ -2089,7 +2131,7 @@ router = APIRouter(
 
 @router.get("", response_model=Page[UserOut])
 def list_users(
-    page: int = Query(1, ge=1),
+    page: int = Query(1, ge=1, le=1_000_000),
     size: int = Query(20, ge=1, le=100),
     q: str | None = Query(None, max_length=100),
     service: UserService = Depends(get_user_service),
@@ -2109,9 +2151,12 @@ def get_user(user_id: int, service: UserService = Depends(get_user_service)):
 
 @router.patch("/{user_id}", response_model=UserOut)
 def update_user(
-    user_id: int, body: UserUpdate, service: UserService = Depends(get_user_service)
+    user_id: int,
+    body: UserUpdate,
+    actor: User = Depends(require_admin),
+    service: UserService = Depends(get_user_service),
 ):
-    return service.update(user_id, body)
+    return service.update(user_id, body, actor_id=actor.id)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -2145,7 +2190,7 @@ E, abaixo de `app.include_router(auth.router, prefix="/api/v1")`, adicionar:
 - [ ] **Step 7: Rodar a suíte inteira**
 
 Run: `python -m pytest -v`
-Expected: PASS em todos os testes (16 novos em `test_users_api.py`).
+Expected: PASS em todos os testes (20 novos em `test_users_api.py`).
 
 - [ ] **Step 8: Commit**
 
