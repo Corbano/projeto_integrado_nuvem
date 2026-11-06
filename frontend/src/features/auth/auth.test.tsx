@@ -7,7 +7,9 @@ import { createAppRouter } from '../../app/router'
 import { apiFetch, API_URL } from '../../shared/api/client'
 import { ADMIN, errorBody, TEST_PASSWORD } from '../../test/handlers'
 import { server } from '../../test/server'
+import { AuthProvider } from './AuthProvider'
 import { getToken, setToken } from './storage'
+import { useAuth } from './useAuth'
 
 function renderAt(path: string) {
   const router = createAppRouter([path])
@@ -121,5 +123,101 @@ describe('sessão', () => {
   it('rota desconhecida mostra página não encontrada', async () => {
     renderAt('/nada')
     expect(await screen.findByRole('heading', { name: 'Página não encontrada' })).toBeInTheDocument()
+  })
+})
+
+function Probe() {
+  const { status, login, logout } = useAuth()
+  return (
+    <div>
+      <p data-testid="status">{status}</p>
+      <button type="button" onClick={logout}>
+        probe-logout
+      </button>
+      <button type="button" onClick={() => void login('admin@teste.local', TEST_PASSWORD)}>
+        probe-login
+      </button>
+    </div>
+  )
+}
+
+function gate() {
+  let release: () => void = () => undefined
+  const promise = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  return { promise, release }
+}
+
+describe('corridas de sessão', () => {
+  it('/auth/me que resolve depois do logout não reautentica', async () => {
+    const g = gate()
+    server.use(
+      http.get(`${API_URL}/auth/me`, async () => {
+        await g.promise
+        return HttpResponse.json(ADMIN)
+      }),
+    )
+    setToken('token-admin')
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    )
+    expect(screen.getByTestId('status')).toHaveTextContent('loading')
+    await userEvent.setup().click(screen.getByRole('button', { name: 'probe-logout' }))
+    expect(screen.getByTestId('status')).toHaveTextContent('anonymous')
+    g.release()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(screen.getByTestId('status')).toHaveTextContent('anonymous')
+    expect(getToken()).toBeNull()
+  })
+
+  it('401 tardio do /auth/me inicial não derruba um login mais novo', async () => {
+    const g = gate()
+    server.use(
+      http.get(`${API_URL}/auth/me`, async ({ request }) => {
+        if (request.headers.get('Authorization') !== 'Bearer token-velho') return undefined
+        await g.promise
+        return HttpResponse.json(errorBody('authentication_failed', 'Token inválido'), { status: 401 })
+      }),
+    )
+    setToken('token-velho')
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    )
+    await userEvent.setup().click(screen.getByRole('button', { name: 'probe-login' }))
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'))
+    g.release()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(screen.getByTestId('status')).toHaveTextContent('authenticated')
+    expect(getToken()).toBe('token-admin')
+  })
+
+  it('500 no /auth/me inicial mantém o token e não diz que a sessão terminou', async () => {
+    server.use(
+      http.get(`${API_URL}/auth/me`, () =>
+        HttpResponse.json(errorBody('internal_error', 'Erro interno'), { status: 500 }),
+      ),
+    )
+    setToken('token-admin')
+    renderAt('/')
+    await screen.findByRole('heading', { name: 'Entrar' })
+    expect(getToken()).toBe('token-admin')
+    expect(screen.queryByText(/sessão terminou/)).not.toBeInTheDocument()
+  })
+
+  it('500 no login mostra a mensagem genérica, não a de credenciais', async () => {
+    server.use(
+      http.post(`${API_URL}/auth/login`, () =>
+        HttpResponse.json(errorBody('internal_error', 'Erro interno'), { status: 500 }),
+      ),
+    )
+    renderAt('/entrar')
+    await fillAndSubmit('admin@teste.local', TEST_PASSWORD)
+    expect(await screen.findByText(/Não foi possível entrar agora/)).toBeInTheDocument()
+    expect(screen.queryByText('E-mail ou senha incorretos.')).not.toBeInTheDocument()
   })
 })

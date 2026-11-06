@@ -11,6 +11,7 @@ export interface AuthContextValue {
   sessionEnd: SessionEnd
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  /** Variádica: can('admin', 'reception'). Verdadeiro se o perfil do usuário estiver entre os informados (substitui o can(role[]) do plano). */
   can: (...roles: Role[]) => boolean
 }
 

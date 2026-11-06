@@ -69,4 +69,18 @@ describe('apiFetch', () => {
     setUnauthorizedHandler(null)
     expect(handler).not.toHaveBeenCalled()
   })
+
+  it('204 com noContent devolve undefined', async () => {
+    server.use(http.delete(`${API_URL}/x`, () => new HttpResponse(null, { status: 204 })))
+    await expect(apiFetch('/x', { method: 'DELETE', noContent: true })).resolves.toBeUndefined()
+  })
+
+  it('200 com corpo vazio ou não-JSON vira invalid_response', async () => {
+    server.use(http.get(`${API_URL}/x`, () => new HttpResponse('<html>', { status: 200 })))
+    const error = (await apiFetch('/x').catch((e: unknown) => e)) as ApiError
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.status).toBe(200)
+    expect(error.code).toBe('invalid_response')
+    expect(error.message).toBe('Resposta inesperada do servidor.')
+  })
 })

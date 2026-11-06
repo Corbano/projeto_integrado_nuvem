@@ -1,5 +1,5 @@
 import { getToken } from '../../features/auth/storage'
-import { networkError, parseErrorResponse } from './errors'
+import { ApiError, networkError, parseErrorResponse } from './errors'
 
 export const API_URL: string = (
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://127.0.0.1:8000/api/v1'
@@ -21,7 +21,19 @@ export interface RequestOptions {
   signal?: AbortSignal
 }
 
-export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export interface NoContentOptions extends RequestOptions {
+  /** A rota responde 204 sem corpo (ex.: DELETE). */
+  noContent: true
+}
+
+const INVALID_RESPONSE_MESSAGE = 'Resposta inesperada do servidor.'
+
+export function apiFetch(path: string, options: NoContentOptions): Promise<void>
+export function apiFetch<T>(path: string, options?: RequestOptions): Promise<T>
+export async function apiFetch<T>(
+  path: string,
+  options: RequestOptions & { noContent?: boolean } = {},
+): Promise<T | void> {
   const { method = 'GET', body, auth = true, signal } = options
   const token = auth ? getToken() : null
   const headers: Record<string, string> = { Accept: 'application/json' }
@@ -45,6 +57,10 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     if (response.status === 401 && token && getToken() === token) unauthorizedHandler?.()
     throw await parseErrorResponse(response)
   }
-  if (response.status === 204) return undefined as T
-  return (await response.json()) as T
+  if (options.noContent) return undefined
+  try {
+    return (await response.json()) as T
+  } catch {
+    throw new ApiError(response.status, 'invalid_response', INVALID_RESPONSE_MESSAGE)
+  }
 }
