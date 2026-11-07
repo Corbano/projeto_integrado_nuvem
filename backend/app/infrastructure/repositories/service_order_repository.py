@@ -1,18 +1,23 @@
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.domain.errors import ConflictError, NotFoundError
 from app.domain.service_order import (
+    BILLED_STATUSES,
     ItemKind,
     OrderStatus,
     ServiceOrder,
     ServiceOrderItem,
+    ServiceOrderRow,
+    ServiceOrderStats,
     StatusChange,
     format_number,
+    money,
 )
 from app.infrastructure.db.models.customer import CustomerModel
 from app.infrastructure.db.models.service_order import (
@@ -219,6 +224,12 @@ class SqlServiceOrderRepository:
         ).all()
         return [_item_to_entity(r) for r in rows]
 
+    @staticmethod
+    def _joined(stmt):
+        return stmt.select_from(ServiceOrderModel).join(
+            VehicleModel, VehicleModel.id == ServiceOrderModel.vehicle_id
+        ).join(CustomerModel, CustomerModel.id == VehicleModel.customer_id)
+
     def list_page(
         self,
         *,
@@ -228,34 +239,120 @@ class SqlServiceOrderRepository:
         status: OrderStatus | None = None,
         vehicle_id: int | None = None,
         mechanic_id: int | None = None,
-    ) -> tuple[list[ServiceOrder], int]:
-        stmt = select(ServiceOrderModel).where(ServiceOrderModel.deleted_at.is_(None))
+        customer_id: int | None = None,
+    ) -> tuple[list[ServiceOrderRow], int]:
+        conds = [ServiceOrderModel.deleted_at.is_(None)]
         if status is not None:
-            stmt = stmt.where(ServiceOrderModel.status == status.value)
+            conds.append(ServiceOrderModel.status == status.value)
         if vehicle_id is not None:
-            stmt = stmt.where(ServiceOrderModel.vehicle_id == vehicle_id)
+            conds.append(ServiceOrderModel.vehicle_id == vehicle_id)
         if mechanic_id is not None:
-            stmt = stmt.where(ServiceOrderModel.mechanic_id == mechanic_id)
+            conds.append(ServiceOrderModel.mechanic_id == mechanic_id)
+        if customer_id is not None:
+            conds.append(VehicleModel.customer_id == customer_id)
         if search and search.strip():
             like = f"%{_escape(search.strip())}%"
-            matching_vehicles = (
-                select(VehicleModel.id)
-                .join(CustomerModel, CustomerModel.id == VehicleModel.customer_id)
-                .where(
-                    or_(
-                        VehicleModel.plate.ilike(like, escape="\\"),
-                        CustomerModel.name.ilike(like, escape="\\"),
-                    )
-                )
-            )
-            stmt = stmt.where(
+            conds.append(
                 or_(
                     ServiceOrderModel.number.ilike(like, escape="\\"),
-                    ServiceOrderModel.vehicle_id.in_(matching_vehicles),
+                    VehicleModel.plate.ilike(like, escape="\\"),
+                    CustomerModel.name.ilike(like, escape="\\"),
                 )
             )
-        total = self._db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-        rows = self._db.scalars(
-            stmt.order_by(ServiceOrderModel.id.desc()).offset(offset).limit(limit)
+        total = (
+            self._db.scalar(
+                self._joined(select(func.count(ServiceOrderModel.id))).where(*conds)
+            )
+            or 0
+        )
+        # Uma consulta só (join): sem N+1 para veículo/cliente.
+        rows = self._db.execute(
+            self._joined(
+                select(
+                    ServiceOrderModel,
+                    VehicleModel.plate,
+                    VehicleModel.brand,
+                    VehicleModel.model,
+                    CustomerModel.id,
+                    CustomerModel.name,
+                )
+            )
+            .where(*conds)
+            .order_by(ServiceOrderModel.id.desc())
+            .offset(offset)
+            .limit(limit)
         ).all()
-        return [self._to_entity(r) for r in rows], total
+        return [
+            ServiceOrderRow(
+                order=self._to_entity(m),
+                vehicle_plate=plate,
+                vehicle_brand=brand,
+                vehicle_model=model,
+                customer_id=cid,
+                customer_name=cname,
+            )
+            for m, plate, brand, model, cid, cname in rows
+        ], total
+
+    def stats(
+        self,
+        *,
+        customer_id: int | None = None,
+        vehicle_id: int | None = None,
+        mechanic_id: int | None = None,
+    ) -> ServiceOrderStats:
+        billed = [s.value for s in BILLED_STATUSES]
+
+        def scope(so, v):
+            conds = [so.deleted_at.is_(None)]
+            if customer_id is not None:
+                conds.append(v.customer_id == customer_id)
+            if vehicle_id is not None:
+                conds.append(so.vehicle_id == vehicle_id)
+            if mechanic_id is not None:
+                conds.append(so.mechanic_id == mechanic_id)
+            return conds
+
+        so_a, v_a = aliased(ServiceOrderModel), aliased(VehicleModel)
+        conds = scope(ServiceOrderModel, VehicleModel)
+        is_billed = ServiceOrderModel.status.in_(billed)
+        # Data da última finalização = última entrada "-> finalizada" no histórico
+        # (aliases evitam a auto-correlação com a consulta externa).
+        last_service = (
+            select(func.max(ServiceOrderStatusHistoryModel.changed_at))
+            .join(so_a, so_a.id == ServiceOrderStatusHistoryModel.service_order_id)
+            .join(v_a, v_a.id == so_a.vehicle_id)
+            .where(
+                *scope(so_a, v_a),
+                ServiceOrderStatusHistoryModel.to_status == OrderStatus.FINISHED.value,
+            )
+            .scalar_subquery()
+        )
+        v_c = aliased(VehicleModel)
+        vehicles_count = (
+            select(func.count(v_c.id))
+            .where(v_c.customer_id == customer_id, v_c.deleted_at.is_(None))
+            .scalar_subquery()
+            if customer_id is not None
+            else None
+        )
+        columns = [
+            func.count(ServiceOrderModel.id),
+            func.coalesce(func.sum(case((is_billed, 0), else_=1)), 0),
+            func.coalesce(func.sum(case((is_billed, ServiceOrderModel.total), else_=0)), 0),
+            func.max(ServiceOrderModel.id),
+            last_service,
+        ]
+        if vehicles_count is not None:
+            columns.append(vehicles_count)
+        count, open_count, total_billed, last_id, last_date, *rest = self._db.execute(
+            self._joined(select(*columns)).where(*conds)
+        ).one()
+        return ServiceOrderStats(
+            vehicles_count=rest[0] if rest else 0,
+            service_orders_count=int(count or 0),
+            open_orders_count=int(open_count or 0),
+            total_billed=money(Decimal(str(total_billed or 0))),
+            last_service_date=last_date.date() if last_date else None,
+            last_order_number=format_number(last_id) if last_id else None,
+        )

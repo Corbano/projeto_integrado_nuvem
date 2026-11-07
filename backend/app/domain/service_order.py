@@ -147,6 +147,33 @@ def format_number(order_id: int) -> str:
     return f"OS-{order_id:06d}"
 
 
+BILLED_STATUSES = (OrderStatus.FINISHED, OrderStatus.DELIVERED)
+
+
+@dataclass
+class ServiceOrderRow:
+    """OS + resumo do veículo e do cliente (linha de listagem/histórico, sem N+1)."""
+
+    order: ServiceOrder
+    vehicle_plate: str
+    vehicle_brand: str
+    vehicle_model: str
+    customer_id: int
+    customer_name: str
+
+
+@dataclass
+class ServiceOrderStats:
+    """Agregados de um cliente/veículo. `total_billed` soma só finalizada/entregue."""
+
+    vehicles_count: int = 0
+    service_orders_count: int = 0
+    open_orders_count: int = 0
+    total_billed: Decimal = Decimal("0.00")
+    last_service_date: date | None = None
+    last_order_number: str | None = None
+
+
 class ServiceOrderRepository(Protocol):
     """Nenhum método confirma a transação: o service chama `uow.commit()`."""
 
@@ -183,6 +210,19 @@ class ServiceOrderRepository(Protocol):
         status: OrderStatus | None = None,
         vehicle_id: int | None = None,
         mechanic_id: int | None = None,
-    ) -> tuple[list[ServiceOrder], int]:
-        """Busca por número, placa do veículo e nome do cliente; mais recentes primeiro."""
+        customer_id: int | None = None,
+    ) -> tuple[list[ServiceOrderRow], int]:
+        """Busca por número, placa do veículo e nome do cliente; mais recentes primeiro.
+
+        `customer_id` filtra as OS dos veículos do cliente. Uma única consulta (join)."""
+        ...
+
+    def stats(
+        self,
+        *,
+        customer_id: int | None = None,
+        vehicle_id: int | None = None,
+        mechanic_id: int | None = None,
+    ) -> ServiceOrderStats:
+        """Agregados em uma consulta; `mechanic_id` restringe às OS atribuídas a ele."""
         ...

@@ -6,6 +6,7 @@ from app.application.dtos.service_order import (
     ServiceOrderDetailOut,
     ServiceOrderItemCreate,
     ServiceOrderItemUpdate,
+    ServiceOrderListOut,
     ServiceOrderOut,
     ServiceOrderUpdate,
     StatusChangeIn,
@@ -27,7 +28,7 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=Page[ServiceOrderOut])
+@router.get("", response_model=Page[ServiceOrderListOut])
 def list_orders(
     page: int = Query(1, ge=1, le=1_000_000),
     size: int = Query(20, ge=1, le=100),

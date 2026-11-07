@@ -1,14 +1,16 @@
 from app.application.dtos.common import Page
 from app.application.dtos.service_order import (
     CustomerSummary,
+    CustomerSummaryStatsOut,
     MechanicSummary,
     ServiceOrderCreate,
     ServiceOrderDetailOut,
     ServiceOrderItemCreate,
     ServiceOrderItemUpdate,
-    ServiceOrderOut,
+    ServiceOrderListOut,
     ServiceOrderUpdate,
     VehicleSummary,
+    VehicleSummaryStatsOut,
 )
 from app.application.ports import UnitOfWork
 from app.domain.checkin import CheckinRepository
@@ -30,6 +32,7 @@ from app.domain.service_order import (
 from app.domain.user import User, UserRepository
 from app.domain.vehicle import VehicleRepository
 
+_NO_ACCESS = -1  # id inexistente: lista vazia
 _NOT_FOUND = "Ordem de serviço não encontrada"
 _ITEMS_LOCKED = "Itens não podem ser alterados em ordens finalizadas ou entregues"
 _FRONT_DESK = (Role.ADMIN, Role.RECEPTION)
@@ -66,26 +69,54 @@ class ServiceOrderService:
         status: OrderStatus | None = None,
         vehicle_id: int | None = None,
         mechanic_id: int | None = None,
-    ) -> Page[ServiceOrderOut]:
-        if actor.role is Role.MECHANIC:
-            # Mecânico só enxerga as OS atribuídas a ele.
-            if mechanic_id not in (None, actor.id):
-                return Page[ServiceOrderOut](items=[], total=0, page=page, size=size)
-            mechanic_id = actor.id
-        orders, total = self._orders.list_page(
+        customer_id: int | None = None,
+    ) -> Page[ServiceOrderListOut]:
+        mechanic_id = self._scope_mechanic(actor, mechanic_id)
+        if mechanic_id == _NO_ACCESS:
+            return Page[ServiceOrderListOut](items=[], total=0, page=page, size=size)
+        rows, total = self._orders.list_page(
             offset=(page - 1) * size,
             limit=size,
             search=search,
             status=status,
             vehicle_id=vehicle_id,
             mechanic_id=mechanic_id,
+            customer_id=customer_id,
         )
-        return Page[ServiceOrderOut](
-            items=[ServiceOrderOut.from_entity(o) for o in orders],
+        return Page[ServiceOrderListOut](
+            items=[ServiceOrderListOut.from_row(r) for r in rows],
             total=total,
             page=page,
             size=size,
         )
+
+    def list_for_customer(
+        self, customer_id: int, *, actor: User, page: int, size: int
+    ) -> Page[ServiceOrderListOut]:
+        self._customer_or_404(customer_id)
+        return self.list_orders(
+            actor=actor, page=page, size=size, search=None, customer_id=customer_id
+        )
+
+    def list_for_vehicle(
+        self, vehicle_id: int, *, actor: User, page: int, size: int
+    ) -> Page[ServiceOrderListOut]:
+        self._vehicle_or_404(vehicle_id)
+        return self.list_orders(
+            actor=actor, page=page, size=size, search=None, vehicle_id=vehicle_id
+        )
+
+    def customer_summary(self, customer_id: int, *, actor: User) -> CustomerSummaryStatsOut:
+        self._customer_or_404(customer_id)
+        stats = self._orders.stats(
+            customer_id=customer_id, mechanic_id=self._summary_mechanic(actor)
+        )
+        return CustomerSummaryStatsOut.from_stats(customer_id, stats)
+
+    def vehicle_summary(self, vehicle_id: int, *, actor: User) -> VehicleSummaryStatsOut:
+        self._vehicle_or_404(vehicle_id)
+        stats = self._orders.stats(vehicle_id=vehicle_id, mechanic_id=self._summary_mechanic(actor))
+        return VehicleSummaryStatsOut.from_stats(vehicle_id, stats)
 
     def get(self, order_id: int, *, actor: User) -> ServiceOrderDetailOut:
         return self._detail(self._load(order_id, actor))
@@ -238,6 +269,25 @@ class ServiceOrderService:
             self._touch_and_recalculate(order, actor)
 
     # ---- internos ---------------------------------------------------------------------
+
+    @staticmethod
+    def _scope_mechanic(actor: User, mechanic_id: int | None) -> int | None:
+        """Mecânico só enxerga as OS atribuídas a ele; `_NO_ACCESS` = pediu outro mecânico."""
+        if actor.role is not Role.MECHANIC:
+            return mechanic_id
+        return actor.id if mechanic_id in (None, actor.id) else _NO_ACCESS
+
+    @staticmethod
+    def _summary_mechanic(actor: User) -> int | None:
+        return actor.id if actor.role is Role.MECHANIC else None
+
+    def _customer_or_404(self, customer_id: int) -> None:
+        if self._customers.get_by_id(customer_id) is None:
+            raise NotFoundError("Cliente não encontrado")
+
+    def _vehicle_or_404(self, vehicle_id: int) -> None:
+        if self._vehicles.get_by_id(vehicle_id) is None:
+            raise NotFoundError("Veículo não encontrado")
 
     def _transaction(self):
         return _Transaction(self._uow)

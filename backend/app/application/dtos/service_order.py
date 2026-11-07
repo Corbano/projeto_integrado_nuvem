@@ -18,6 +18,8 @@ from app.domain.service_order import (
     OrderStatus,
     ServiceOrder,
     ServiceOrderItem,
+    ServiceOrderRow,
+    ServiceOrderStats,
     StatusChange,
 )
 
@@ -209,6 +211,61 @@ class CustomerSummary(BaseModel):
 class MechanicSummary(BaseModel):
     id: int
     name: str
+
+
+class ServiceOrderListOut(ServiceOrderOut):
+    """Linha de listagem/histórico: já traz veículo e cliente (sem chamadas extras)."""
+
+    vehicle: VehicleSummary
+    customer: CustomerSummary
+
+    @classmethod
+    def from_row(cls, row: ServiceOrderRow) -> "ServiceOrderListOut":
+        return cls(
+            **_fields(row.order),
+            vehicle=VehicleSummary(
+                id=row.order.vehicle_id,
+                plate=row.vehicle_plate,
+                brand=row.vehicle_brand,
+                model=row.vehicle_model,
+            ),
+            customer=CustomerSummary(id=row.customer_id, name=row.customer_name),
+        )
+
+
+class _StatsOut(BaseModel):
+    service_orders_count: int
+    open_orders_count: int
+    total_billed: Money
+    last_service_date: date | None
+    last_order_number: str | None
+
+
+class CustomerSummaryStatsOut(_StatsOut):
+    customer_id: int
+    vehicles_count: int
+
+    @classmethod
+    def from_stats(cls, customer_id: int, stats: ServiceOrderStats) -> "CustomerSummaryStatsOut":
+        return cls(customer_id=customer_id, **_stats_fields(stats), vehicles_count=stats.vehicles_count)
+
+
+class VehicleSummaryStatsOut(_StatsOut):
+    vehicle_id: int
+
+    @classmethod
+    def from_stats(cls, vehicle_id: int, stats: ServiceOrderStats) -> "VehicleSummaryStatsOut":
+        return cls(vehicle_id=vehicle_id, **_stats_fields(stats))
+
+
+def _stats_fields(stats: ServiceOrderStats) -> dict:
+    return {
+        "service_orders_count": stats.service_orders_count,
+        "open_orders_count": stats.open_orders_count,
+        "total_billed": stats.total_billed,
+        "last_service_date": stats.last_service_date,
+        "last_order_number": stats.last_order_number,
+    }
 
 
 class ServiceOrderDetailOut(ServiceOrderOut):
