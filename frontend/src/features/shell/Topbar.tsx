@@ -15,7 +15,12 @@ function useBreadcrumb(): BreadcrumbItem[] {
   const { pathname } = useLocation()
   if (pathname === '/') return [{ label: 'Início' }]
   const current = findModuleByPath(pathname)
-  return [{ label: 'Início', to: '/' }, { label: current ? current.title : 'Página não encontrada' }]
+  if (!current) return [{ label: 'Início', to: '/' }, { label: 'Página não encontrada' }]
+  // Em páginas internas (ex.: /clientes/7) o módulo vira link e a última migalha é "Detalhes".
+  if (pathname !== current.route) {
+    return [{ label: 'Início', to: '/' }, { label: current.title, to: current.route }, { label: 'Detalhes' }]
+  }
+  return [{ label: 'Início', to: '/' }, { label: current.title }]
 }
 
 const isMac = typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.platform)

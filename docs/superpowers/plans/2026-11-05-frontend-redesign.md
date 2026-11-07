@@ -60,6 +60,16 @@ Cores de acento por funcionalidade (barra no topo do card, ref. 1): azul `#2457E
 - **F5: Usuários** no novo visual (tabela estilo refs 2/3, busca + filtro por perfil + paginação, avatar, pílula de perfil e estado, criar/editar em diálogo, excluir com confirmação).
 - **Depois, junto de cada plano de backend:** Clientes, Veículos (lista + detalhe estilo ref. 8 com próximo serviço e histórico em linha do tempo), Check-in (diagrama do carro + semáforo, ref. 4), Ordens de serviço (kanban + lista, ref. 6/5), Dashboard e Alertas (ref. 7), Saúde do veículo (nota 0–100).
 
+## R3: PC e celular (pedido do cliente: "próprio para PC e otimizado para o celular")
+
+Critérios obrigatórios, verificados em 1920, 1440, 1024, 768 e 390 px (e 360):
+- **PC:** conteúdo com largura máxima confortável (≈1280–1440 px) centrada na área útil, tabelas densas com cabeçalho fixo e ações por linha, atalhos de teclado (Ctrl+K já existe; `Esc`, setas), foco visível, hover.
+- **Celular (um polegar):** sem rolagem horizontal da página; barra de navegação inferior fixa com 4 atalhos + "Mais" (Início, Veículos, Ordens, Check-in; somente módulos disponíveis para o perfil) no lugar da barra lateral em < 768 px, respeitando `env(safe-area-inset-*)`; alvos de toque ≥ 44 px; tabelas viram **listas de cards empilhados** (nome/placa em destaque, status em pílula, ação "⋯"); formulários em coluna única com `inputmode`/`autocomplete`/`enterkeyhint` corretos (e-mail, telefone, numérico para km, placa em maiúsculas); diálogos viram **bottom sheet** em < 640 px; tipografia ≥ 16 px em campos (evita zoom do iOS); `viewport-fit=cover`; `theme-color` navy.
+- **Tablet na bancada (768–1024):** barra lateral recolhida em ícones, tabelas e kanban com rolagem horizontal contida e alvos grandes.
+- **Instalável (PWA leve):** `manifest.webmanifest` (nome, ícones gerados do Logo em 192/512, `display: standalone`, cores da paleta) e `<meta name="theme-color">`; **sem** service worker de cache de dados da API (evita dado velho e problemas de segurança), no máximo cache dos arquivos estáticos do app.
+- **Desempenho:** divisão de código por rota (`React.lazy`), imagens/ícones leves, fontes só com os subconjuntos usados; meta de LCP < 2,5 s em 4G simulado e bundle inicial enxuto (reportar tamanhos do build).
+- Teste visual em navegador real nos 5 tamanhos para: login, Início (cards + dashboard), Usuários; corrigir tudo que quebrar; testes de unidade para os componentes responsivos (barra inferior, bottom sheet, lista de cards) e para o roteamento por perfil na barra inferior.
+
 ## Revisão contra o genérico
 
 Esta direção é deliberadamente o padrão "SaaS moderno" porque é o que o cliente pediu com as referências; a identidade vem de: placa Mercosul, hodômetro/nota de saúde, linha do tempo de manutenção, semáforo de inspeção e o diagrama do carro. Tudo isso é conteúdo real do domínio, não enfeite.

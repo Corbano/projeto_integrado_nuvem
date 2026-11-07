@@ -1,4 +1,4 @@
-import { BellRing, Car, ClipboardCheck, Contact, House, Package, Users, Wallet, Wrench } from 'lucide-react'
+import { Car, Contact, House, Users, Wrench } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Role } from '../../shared/api/types'
 import type { AccentColor } from '../../shared/ui'
@@ -54,7 +54,7 @@ export const MODULES: readonly AppModule[] = [
     icon: Contact,
     accent: 'menta',
     roles: ALL_ROLES,
-    available: false,
+    available: true,
     group: 'gestao',
   },
   {
@@ -70,24 +70,8 @@ export const MODULES: readonly AppModule[] = [
     icon: Car,
     accent: 'violeta',
     roles: ALL_ROLES,
-    available: false,
+    available: true,
     group: 'gestao',
-  },
-  {
-    id: 'checkin',
-    title: 'Check-in',
-    description: 'Entrada e inspeção do veículo',
-    bullets: [
-      'Registro de entrada com quilometragem',
-      'Inspeção por itens com semáforo',
-      'Avarias marcadas no diagrama do carro',
-    ],
-    route: '/check-in',
-    icon: ClipboardCheck,
-    accent: 'ciano',
-    roles: ['admin', 'reception'],
-    available: false,
-    group: 'operacao',
   },
   {
     id: 'ordens',
@@ -102,55 +86,7 @@ export const MODULES: readonly AppModule[] = [
     icon: Wrench,
     accent: 'azul',
     roles: ALL_ROLES,
-    available: false,
-    group: 'operacao',
-  },
-  {
-    id: 'estoque',
-    title: 'Estoque',
-    description: 'Peças, insumos e estoque mínimo',
-    bullets: [
-      'Entradas e saídas de peças',
-      'Aviso de estoque abaixo do mínimo',
-      'Peças usadas em cada ordem',
-    ],
-    route: '/estoque',
-    icon: Package,
-    accent: 'menta',
-    roles: ['admin', 'reception'],
-    available: false,
-    group: 'gestao',
-  },
-  {
-    id: 'financeiro',
-    title: 'Financeiro',
-    description: 'Receitas, pagamentos e resumo do mês',
-    bullets: [
-      'Receitas por ordem de serviço',
-      'Formas de pagamento recebidas',
-      'Resumo mensal de faturamento',
-    ],
-    route: '/financeiro',
-    icon: Wallet,
-    accent: 'violeta',
-    roles: ['admin'],
-    available: false,
-    group: 'gestao',
-  },
-  {
-    id: 'alertas',
-    title: 'Alertas de manutenção',
-    description: 'Manutenção preventiva por km e prazo',
-    bullets: [
-      'Próxima troca de óleo por quilometragem',
-      'Revisões e rodízio por prazo',
-      'Aviso antes do vencimento',
-    ],
-    route: '/alertas',
-    icon: BellRing,
-    accent: 'ciano',
-    roles: ALL_ROLES,
-    available: false,
+    available: true,
     group: 'operacao',
   },
 ]

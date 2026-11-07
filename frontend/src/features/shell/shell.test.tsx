@@ -15,11 +15,7 @@ const TITLES = [
   'Usuários',
   'Clientes',
   'Veículos',
-  'Check-in',
   'Ordens de serviço',
-  'Estoque',
-  'Financeiro',
-  'Alertas de manutenção',
 ]
 
 function renderAt(path: string, token = 'token-admin') {
@@ -53,9 +49,9 @@ afterEach(() => {
 })
 
 describe('Início', () => {
-  it('admin vê os 8 cards e as entradas da barra lateral', async () => {
+  it('admin vê os 4 cards e as entradas da barra lateral', async () => {
     renderAt('/')
-    expect(await cards()).toHaveLength(8)
+    expect(await cards()).toHaveLength(4)
     for (const title of TITLES) {
       const card = screen.getAllByRole('heading', { level: 3, name: title }).find((h) => h.closest('article'))
       expect(card).toBeDefined()
@@ -80,62 +76,44 @@ describe('Início', () => {
     expect(within(overview).getByRole('heading', { level: 3, name: 'Alertas de manutenção' })).toBeInTheDocument()
     expect(within(overview).getByRole('heading', { level: 3, name: 'Serviços em andamento' })).toBeInTheDocument()
     expect(within(overview).getByRole('heading', { level: 3, name: 'Agenda de hoje' })).toBeInTheDocument()
-    expect(await cards()).toHaveLength(8)
+    expect(await cards()).toHaveLength(4)
   })
 
   it('recepção vê só o permitido, sem Usuários', async () => {
     renderAt('/', 'token-recepcao')
     await cards()
     const titles = (await cards()).map((card) => within(card).getByRole('heading', { level: 3 }).textContent)
-    expect(titles).toEqual(['Clientes', 'Veículos', 'Check-in', 'Ordens de serviço', 'Estoque', 'Alertas de manutenção'])
+    expect(titles).toEqual(['Clientes', 'Veículos', 'Ordens de serviço'])
     const nav = screen.getByRole('navigation', { name: 'Principal' })
     expect(within(nav).queryByText('Usuários')).not.toBeInTheDocument()
     expect(within(nav).queryByText('Financeiro')).not.toBeInTheDocument()
     expect(within(nav).queryByText('Administração')).not.toBeInTheDocument()
   })
 
-  it('só o módulo concluído mostra a barra azul embaixo e a etiqueta "Concluído"', async () => {
+  it('módulos concluídos mostram a barra azul embaixo e a etiqueta "Concluído"', async () => {
     renderAt('/')
     await cards()
     const usuarios = screen.getByRole('heading', { level: 3, name: 'Usuários' }).closest('article')!
     expect(within(usuarios).getByText('Concluído')).toBeInTheDocument()
     expect(within(usuarios).getByTestId('modulo-concluido-barra')).toBeInTheDocument()
-    const clientes = screen.getByRole('heading', { level: 3, name: 'Clientes' }).closest('article')!
-    expect(within(clientes).queryByText('Concluído')).not.toBeInTheDocument()
-    expect(within(clientes).queryByTestId('modulo-concluido-barra')).not.toBeInTheDocument()
     expect(screen.getAllByText('Concluído')).toHaveLength(MODULES.filter((m) => m.available).length)
   })
 
-  it('o resumo conta os módulos concluídos do perfil (admin vê 8)', async () => {
+  it('o resumo conta os módulos concluídos do perfil (admin vê 4)', async () => {
     renderAt('/')
     await cards()
     const done = MODULES.filter((m) => m.available).length
-    expect(screen.getByTestId('resumo-modulos')).toHaveTextContent(`${done} de 8 módulos concluídos`)
-    const bar = screen.getByRole('progressbar', { name: `${done} de 8 módulos concluídos` })
-    expect(bar).toHaveAttribute('aria-valuenow', String(Math.round((done / 8) * 100)))
+    expect(screen.getByTestId('resumo-modulos')).toHaveTextContent(`${done} de 4 módulos concluídos`)
+    const bar = screen.getByRole('progressbar', { name: `${done} de 4 módulos concluídos` })
+    expect(bar).toHaveAttribute('aria-valuenow', String(Math.round((done / 4) * 100)))
     expect(bar).toHaveAttribute('aria-valuemax', '100')
   })
 
-  it('o resumo da recepção conta só os 6 módulos que ela vê', async () => {
+  it('o resumo da recepção conta só os 3 módulos que ela vê', async () => {
     renderAt('/', 'token-recepcao')
     await cards()
     const done = modulesForRole('reception').filter((m) => m.available).length
-    expect(screen.getByTestId('resumo-modulos')).toHaveTextContent(`${done} de 6 módulos concluídos`)
-  })
-
-  it('módulos indisponíveis não são links nem entram na ordem de tabulação', async () => {
-    renderAt('/')
-    await cards()
-    const clientes = screen.getByRole('heading', { level: 3, name: 'Clientes' }).closest('article')!
-    expect(within(clientes).queryByRole('link')).not.toBeInTheDocument()
-    const button = within(clientes).getByRole('button', { name: 'Em breve' })
-    expect(button).toHaveAttribute('aria-disabled', 'true')
-    expect(button).toHaveAttribute('tabindex', '-1')
-    const nav = screen.getByRole('navigation', { name: 'Principal' })
-    const disabled = within(nav).getByTitle('Clientes (em breve)')
-    expect(disabled).toHaveAttribute('aria-disabled', 'true')
-    expect(disabled).not.toHaveAttribute('href')
-    expect(disabled).not.toHaveAttribute('tabindex')
+    expect(screen.getByTestId('resumo-modulos')).toHaveTextContent(`${done} de 3 módulos concluídos`)
   })
 
   it('saudação muda com o horário', async () => {
@@ -208,22 +186,6 @@ describe('paleta de comandos', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('módulos indisponíveis ficam desabilitados e não podem ser escolhidos', async () => {
-    const user = userEvent.setup()
-    const router = renderAt('/')
-    await cards()
-    await user.keyboard('{Control>}k{/Control}')
-    const input = await screen.findByRole('combobox', { name: 'Buscar funcionalidade' })
-    await user.type(input, 'clientes')
-    const option = screen.getByRole('option', { name: /Clientes/ })
-    expect(option).toHaveAttribute('aria-disabled', 'true')
-    expect(option).toHaveAttribute('aria-selected', 'false')
-    await user.keyboard('{Enter}')
-    await user.click(option)
-    expect(router.state.location.pathname).toBe('/')
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-  })
-
   it('setas movem a seleção e Esc fecha devolvendo o foco', async () => {
     const user = userEvent.setup()
     renderAt('/')
@@ -235,6 +197,12 @@ describe('paleta de comandos', () => {
     expect(selected()).toContain('Início')
     await user.keyboard('{ArrowDown}')
     expect(selected()).toContain('Usuários')
+    await user.keyboard('{ArrowDown}')
+    expect(selected()).toContain('Clientes')
+    await user.keyboard('{ArrowDown}')
+    expect(selected()).toContain('Veículos')
+    await user.keyboard('{ArrowDown}')
+    expect(selected()).toContain('Ordens de serviço')
     await user.keyboard('{ArrowDown}')
     expect(selected()).toContain('Início')
     expect(input).toHaveAttribute('aria-activedescendant')
